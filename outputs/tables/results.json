@@ -1,0 +1,1684 @@
+{
+  "generated_on": "2026-09-08",
+  "data": {
+    "source_file": "default_of_credit_card_clients.csv",
+    "integrity_checks": {
+      "rows": 30000,
+      "columns": 25,
+      "defaults": 6636,
+      "default_rate": 0.2212,
+      "missing_values": 0,
+      "duplicate_ids": 0,
+      "duplicate_rows_excl_id": 35
+    },
+    "cleaning": {
+      "rows_in": 30000,
+      "education_codes_recoded_to_other": 468,
+      "marriage_codes_recoded_to_other": 377,
+      "duplicate_rows_dropped": 35,
+      "rows_out": 29965,
+      "default_rate_after_clean": 0.22125813449023862,
+      "negative_bill_amounts": 3932
+    },
+    "n_features_behavioural": 28,
+    "n_features_origination": 5,
+    "splits": {
+      "train": {
+        "rows": 17979,
+        "defaults": 3978,
+        "default_rate": 0.22125813449023862
+      },
+      "val": {
+        "rows": 5993,
+        "defaults": 1326,
+        "default_rate": 0.22125813449023862
+      },
+      "test": {
+        "rows": 5993,
+        "defaults": 1326,
+        "default_rate": 0.22125813449023862
+      }
+    }
+  },
+  "training": {
+    "behavioural": {
+      "feature_set": "behavioural",
+      "n_features": 28,
+      "calibration_selection": "cross-validated within the validation fold",
+      "calibration_choices": {
+        "Logistic regression": {
+          "method": "isotonic",
+          "cv_brier_by_method": {
+            "isotonic": 0.13620497821624794,
+            "sigmoid": 0.13628503905827677
+          }
+        },
+        "Decision tree": {
+          "method": "isotonic",
+          "cv_brier_by_method": {
+            "isotonic": 0.13620404250150142,
+            "sigmoid": 0.13639898573816034
+          }
+        },
+        "Random forest": {
+          "method": "isotonic",
+          "cv_brier_by_method": {
+            "isotonic": 0.13388390682612453,
+            "sigmoid": 0.13408487415224363
+          }
+        },
+        "Gradient boosting (LightGBM)": {
+          "method": "sigmoid",
+          "cv_brier_by_method": {
+            "isotonic": 0.13420987445617777,
+            "sigmoid": 0.13310044291706744
+          }
+        },
+        "Gradient boosting (XGBoost)": {
+          "method": "isotonic",
+          "cv_brier_by_method": {
+            "isotonic": 0.13355923337840322,
+            "sigmoid": 0.13379434580880586
+          }
+        }
+      },
+      "pd_floor": 0.0003,
+      "pd_cap": 0.9997,
+      "random_state": 42,
+      "models": {
+        "Baseline (prior)": {
+          "params": {},
+          "val_auc_uncalibrated": 0.5,
+          "fit_seconds": 0.05,
+          "notes": "Predicts the training-set default rate for every account. It has no discriminatory power by construction and exists to show what any real model must beat.",
+          "artifact": "behavioural__baseline_prior.joblib",
+          "calibrated_artifact": null,
+          "n_grid_points": 1,
+          "calibration_method": null,
+          "calibration_cv_brier": null
+        },
+        "Logistic regression": {
+          "params": {
+            "C": 0.1
+          },
+          "val_auc_uncalibrated": 0.777717154010654,
+          "fit_seconds": 1.87,
+          "notes": "The scorecard reference model: monotone in each input, coefficients readable as log-odds, and the easiest model to defend in a credit committee or a model-validation review.",
+          "artifact": "behavioural__logistic_regression.joblib",
+          "calibrated_artifact": "behavioural__logistic_regression__calibrated.joblib",
+          "n_grid_points": 4,
+          "calibration_method": "isotonic",
+          "calibration_cv_brier": {
+            "isotonic": 0.13620497821624794,
+            "sigmoid": 0.13628503905827677
+          }
+        },
+        "Decision tree": {
+          "params": {
+            "max_depth": 6,
+            "min_samples_leaf": 200
+          },
+          "val_auc_uncalibrated": 0.7794966810709383,
+          "fit_seconds": 1.39,
+          "notes": "A single shallow tree. Included because its splits read as policy rules, which makes it a useful bridge between the statistical model and a credit policy discussion.",
+          "artifact": "behavioural__decision_tree.joblib",
+          "calibrated_artifact": "behavioural__decision_tree__calibrated.joblib",
+          "n_grid_points": 8,
+          "calibration_method": "isotonic",
+          "calibration_cv_brier": {
+            "isotonic": 0.13620404250150142,
+            "sigmoid": 0.13639898573816034
+          }
+        },
+        "Random forest": {
+          "params": {
+            "n_estimators": 400,
+            "max_depth": 8,
+            "min_samples_leaf": 20
+          },
+          "val_auc_uncalibrated": 0.790218038724448,
+          "fit_seconds": 23.56,
+          "notes": "Bagged trees. Reduces the variance of the single tree and gives a reference for how much of the gain is ensembling rather than boosting.",
+          "artifact": "behavioural__random_forest.joblib",
+          "calibrated_artifact": "behavioural__random_forest__calibrated.joblib",
+          "n_grid_points": 4,
+          "calibration_method": "isotonic",
+          "calibration_cv_brier": {
+            "isotonic": 0.13388390682612453,
+            "sigmoid": 0.13408487415224363
+          }
+        },
+        "Gradient boosting (LightGBM)": {
+          "params": {
+            "n_estimators": 300,
+            "learning_rate": 0.03,
+            "num_leaves": 15,
+            "min_child_samples": 50,
+            "subsample": 0.9,
+            "subsample_freq": 1,
+            "colsample_bytree": 0.8,
+            "reg_lambda": 1.0
+          },
+          "val_auc_uncalibrated": 0.7917574407257918,
+          "fit_seconds": 6.61,
+          "notes": "Gradient-boosted trees. Captures interactions the scorecard cannot, at the cost of direct interpretability, which is why SHAP is used later.",
+          "artifact": "behavioural__gradient_boosting_lightgbm.joblib",
+          "calibrated_artifact": "behavioural__gradient_boosting_lightgbm__calibrated.joblib",
+          "n_grid_points": 8,
+          "calibration_method": "sigmoid",
+          "calibration_cv_brier": {
+            "isotonic": 0.13420987445617777,
+            "sigmoid": 0.13310044291706744
+          }
+        },
+        "Gradient boosting (XGBoost)": {
+          "params": {
+            "n_estimators": 300,
+            "learning_rate": 0.03,
+            "max_depth": 3,
+            "min_child_weight": 5,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "reg_lambda": 1.0
+          },
+          "val_auc_uncalibrated": 0.7926832795718212,
+          "fit_seconds": 4.84,
+          "notes": "A second boosting implementation, kept as a cross-check that the measured gain is a property of the method rather than of one library.",
+          "artifact": "behavioural__gradient_boosting_xgboost.joblib",
+          "calibrated_artifact": "behavioural__gradient_boosting_xgboost__calibrated.joblib",
+          "n_grid_points": 8,
+          "calibration_method": "isotonic",
+          "calibration_cv_brier": {
+            "isotonic": 0.13355923337840322,
+            "sigmoid": 0.13379434580880586
+          }
+        }
+      }
+    },
+    "origination": {
+      "feature_set": "origination",
+      "n_features": 5,
+      "calibration_selection": "cross-validated within the validation fold",
+      "calibration_choices": {
+        "Logistic regression": {
+          "method": "isotonic",
+          "cv_brier_by_method": {
+            "isotonic": 0.16641407988096538,
+            "sigmoid": 0.16646025355291966
+          }
+        },
+        "Decision tree": {
+          "method": "isotonic",
+          "cv_brier_by_method": {
+            "isotonic": 0.16714670995850286,
+            "sigmoid": 0.1671815742496352
+          }
+        },
+        "Random forest": {
+          "method": "isotonic",
+          "cv_brier_by_method": {
+            "isotonic": 0.16686550008839027,
+            "sigmoid": 0.16703187329619645
+          }
+        },
+        "Gradient boosting (LightGBM)": {
+          "method": "sigmoid",
+          "cv_brier_by_method": {
+            "isotonic": 0.1676754470531152,
+            "sigmoid": 0.1669110566443515
+          }
+        },
+        "Gradient boosting (XGBoost)": {
+          "method": "sigmoid",
+          "cv_brier_by_method": {
+            "isotonic": 0.16718207051618364,
+            "sigmoid": 0.16658472432155103
+          }
+        }
+      },
+      "pd_floor": 0.0003,
+      "pd_cap": 0.9997,
+      "random_state": 42,
+      "models": {
+        "Baseline (prior)": {
+          "params": {},
+          "val_auc_uncalibrated": 0.5,
+          "fit_seconds": 0.04,
+          "notes": "Predicts the training-set default rate for every account. It has no discriminatory power by construction and exists to show what any real model must beat.",
+          "artifact": "origination__baseline_prior.joblib",
+          "calibrated_artifact": null,
+          "n_grid_points": 1,
+          "calibration_method": null,
+          "calibration_cv_brier": null
+        },
+        "Logistic regression": {
+          "params": {
+            "C": 10.0
+          },
+          "val_auc_uncalibrated": 0.6282862471685118,
+          "fit_seconds": 0.21,
+          "notes": "The scorecard reference model: monotone in each input, coefficients readable as log-odds, and the easiest model to defend in a credit committee or a model-validation review.",
+          "artifact": "origination__logistic_regression.joblib",
+          "calibrated_artifact": "origination__logistic_regression__calibrated.joblib",
+          "n_grid_points": 4,
+          "calibration_method": "isotonic",
+          "calibration_cv_brier": {
+            "isotonic": 0.16641407988096538,
+            "sigmoid": 0.16646025355291966
+          }
+        },
+        "Decision tree": {
+          "params": {
+            "max_depth": 4,
+            "min_samples_leaf": 50
+          },
+          "val_auc_uncalibrated": 0.6196323727361426,
+          "fit_seconds": 0.35,
+          "notes": "A single shallow tree. Included because its splits read as policy rules, which makes it a useful bridge between the statistical model and a credit policy discussion.",
+          "artifact": "origination__decision_tree.joblib",
+          "calibrated_artifact": "origination__decision_tree__calibrated.joblib",
+          "n_grid_points": 8,
+          "calibration_method": "isotonic",
+          "calibration_cv_brier": {
+            "isotonic": 0.16714670995850286,
+            "sigmoid": 0.1671815742496352
+          }
+        },
+        "Random forest": {
+          "params": {
+            "n_estimators": 400,
+            "max_depth": 8,
+            "min_samples_leaf": 20
+          },
+          "val_auc_uncalibrated": 0.6220408141499911,
+          "fit_seconds": 5.63,
+          "notes": "Bagged trees. Reduces the variance of the single tree and gives a reference for how much of the gain is ensembling rather than boosting.",
+          "artifact": "origination__random_forest.joblib",
+          "calibrated_artifact": "origination__random_forest__calibrated.joblib",
+          "n_grid_points": 4,
+          "calibration_method": "isotonic",
+          "calibration_cv_brier": {
+            "isotonic": 0.16686550008839027,
+            "sigmoid": 0.16703187329619645
+          }
+        },
+        "Gradient boosting (LightGBM)": {
+          "params": {
+            "n_estimators": 300,
+            "learning_rate": 0.03,
+            "num_leaves": 15,
+            "min_child_samples": 50,
+            "subsample": 0.9,
+            "subsample_freq": 1,
+            "colsample_bytree": 0.8,
+            "reg_lambda": 1.0
+          },
+          "val_auc_uncalibrated": 0.6199994279658757,
+          "fit_seconds": 4.26,
+          "notes": "Gradient-boosted trees. Captures interactions the scorecard cannot, at the cost of direct interpretability, which is why SHAP is used later.",
+          "artifact": "origination__gradient_boosting_lightgbm.joblib",
+          "calibrated_artifact": "origination__gradient_boosting_lightgbm__calibrated.joblib",
+          "n_grid_points": 8,
+          "calibration_method": "sigmoid",
+          "calibration_cv_brier": {
+            "isotonic": 0.1676754470531152,
+            "sigmoid": 0.1669110566443515
+          }
+        },
+        "Gradient boosting (XGBoost)": {
+          "params": {
+            "n_estimators": 300,
+            "learning_rate": 0.03,
+            "max_depth": 3,
+            "min_child_weight": 5,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "reg_lambda": 1.0
+          },
+          "val_auc_uncalibrated": 0.6264120274537598,
+          "fit_seconds": 2.63,
+          "notes": "A second boosting implementation, kept as a cross-check that the measured gain is a property of the method rather than of one library.",
+          "artifact": "origination__gradient_boosting_xgboost.joblib",
+          "calibrated_artifact": "origination__gradient_boosting_xgboost__calibrated.joblib",
+          "n_grid_points": 8,
+          "calibration_method": "sigmoid",
+          "calibration_cv_brier": {
+            "isotonic": 0.16718207051618364,
+            "sigmoid": 0.16658472432155103
+          }
+        }
+      }
+    }
+  },
+  "champion_model": "Gradient boosting (XGBoost)",
+  "thresholds": {
+    "policy_target_bad_rate": 0.15,
+    "policy_cutoff_from_validation": 0.4470588266849518,
+    "cost_optimal_from_validation": 0.05113636329770088,
+    "f1_optimal_from_validation": 0.2750000059604645,
+    "naive_default": 0.5,
+    "margin_sensitivity": [
+      {
+        "assumed_margin_on_good_account": 0.06,
+        "implied_cutoff": 0.05113636329770088,
+        "approval_rate": 0.08226263974637077,
+        "bad_rate_of_approved": 0.02636916835699797,
+        "net_cost": 13628838.7
+      },
+      {
+        "assumed_margin_on_good_account": 0.1,
+        "implied_cutoff": 0.07655502110719681,
+        "approval_rate": 0.18705156015351243,
+        "bad_rate_of_approved": 0.04192685102586976,
+        "net_cost": 20781873.587500002
+      },
+      {
+        "assumed_margin_on_good_account": 0.15,
+        "implied_cutoff": 0.16701030731201172,
+        "approval_rate": 0.44885699983313865,
+        "bad_rate_of_approved": 0.0724907063197026,
+        "net_cost": 25869786.23
+      },
+      {
+        "assumed_margin_on_good_account": 0.2,
+        "implied_cutoff": 0.19957081973552704,
+        "approval_rate": 0.5611546804605373,
+        "bad_rate_of_approved": 0.09158489443948856,
+        "net_cost": 29912157.095000006
+      },
+      {
+        "assumed_margin_on_good_account": 0.3,
+        "implied_cutoff": 0.19957081973552704,
+        "approval_rate": 0.5611546804605373,
+        "bad_rate_of_approved": 0.09158489443948856,
+        "net_cost": 35300158.19500001
+      },
+      {
+        "assumed_margin_on_good_account": 0.45,
+        "implied_cutoff": 0.2324510986199936,
+        "approval_rate": 0.7223427331887202,
+        "bad_rate_of_approved": 0.11781011781011781,
+        "net_cost": 39828255.89
+      },
+      {
+        "assumed_margin_on_good_account": 0.6,
+        "implied_cutoff": 0.2324510986199936,
+        "approval_rate": 0.7223427331887202,
+        "bad_rate_of_approved": 0.11781011781011781,
+        "net_cost": 43862138.39
+      }
+    ]
+  },
+  "model_comparison": [
+    {
+      "model": "Baseline (prior)",
+      "val_auc": 0.5,
+      "roc_auc": 0.5,
+      "gini": 0.0,
+      "pr_auc": 0.22125813449023862,
+      "ks": 0.0,
+      "brier": 0.1723029724121381,
+      "log_loss": 0.5284957340545927,
+      "ece": 0.0,
+      "mean_predicted_pd": 0.22125813449023862,
+      "observed_default_rate": 0.22125813449023862,
+      "prevalence_ratio": 1.0,
+      "at_cutoff_threshold": 0.4470588266849518,
+      "at_cutoff_flagged_rate": 0.0,
+      "at_cutoff_precision": 0.0,
+      "at_cutoff_recall": 0.0,
+      "at_cutoff_f1": 0.0,
+      "at_cutoff_specificity": 1.0,
+      "at_cutoff_accuracy": 0.7787418655097614,
+      "at_cutoff_tp": 0,
+      "at_cutoff_fp": 0,
+      "at_cutoff_tn": 4667,
+      "at_cutoff_fn": 1326,
+      "brier_uncalibrated": 0.1723029724121381,
+      "ece_uncalibrated": 0.0
+    },
+    {
+      "model": "Logistic regression",
+      "val_auc": 0.7811614781232498,
+      "roc_auc": 0.7642876025985215,
+      "gini": 0.5285752051970429,
+      "pr_auc": 0.516758830410028,
+      "ks": 0.40894768020771627,
+      "brier": 0.13805273092206086,
+      "log_loss": 0.4413804093943722,
+      "ece": 0.011734401973371621,
+      "mean_predicted_pd": 0.22377296109772649,
+      "observed_default_rate": 0.22125813449023862,
+      "prevalence_ratio": 1.0113660300593323,
+      "at_cutoff_threshold": 0.4470588266849518,
+      "at_cutoff_flagged_rate": 0.1294843984648757,
+      "at_cutoff_precision": 0.645618556701031,
+      "at_cutoff_recall": 0.3778280542986425,
+      "at_cutoff_f1": 0.47668886774500474,
+      "at_cutoff_specificity": 0.9410756374544675,
+      "at_cutoff_accuracy": 0.8164525279492741,
+      "at_cutoff_tp": 501,
+      "at_cutoff_fp": 275,
+      "at_cutoff_tn": 4392,
+      "at_cutoff_fn": 825,
+      "brier_uncalibrated": 0.13817269429001913,
+      "ece_uncalibrated": 0.01344838768841302
+    },
+    {
+      "model": "Decision tree",
+      "val_auc": 0.7808454050308624,
+      "roc_auc": 0.7671010732588267,
+      "gini": 0.5342021465176534,
+      "pr_auc": 0.5146704359785668,
+      "ks": 0.4079666578437674,
+      "brier": 0.1375150945798179,
+      "log_loss": 0.43722936786982963,
+      "ece": 0.01606660870909827,
+      "mean_predicted_pd": 0.22513069482028988,
+      "observed_default_rate": 0.22125813449023862,
+      "prevalence_ratio": 1.0175024540407218,
+      "at_cutoff_threshold": 0.4470588266849518,
+      "at_cutoff_flagged_rate": 0.14416819622893376,
+      "at_cutoff_precision": 0.6145833333333334,
+      "at_cutoff_recall": 0.4004524886877828,
+      "at_cutoff_f1": 0.4849315068493151,
+      "at_cutoff_specificity": 0.9286479537175916,
+      "at_cutoff_accuracy": 0.811780410478892,
+      "at_cutoff_tp": 531,
+      "at_cutoff_fp": 333,
+      "at_cutoff_tn": 4334,
+      "at_cutoff_fn": 795,
+      "brier_uncalibrated": 0.1377822326355197,
+      "ece_uncalibrated": 0.01680994703833661
+    },
+    {
+      "model": "Random forest",
+      "val_auc": 0.7937471176105391,
+      "roc_auc": 0.7751533423113606,
+      "gini": 0.5503066846227211,
+      "pr_auc": 0.5348916244592291,
+      "ks": 0.4120104866459119,
+      "brier": 0.13538303356449213,
+      "log_loss": 0.43235210718114403,
+      "ece": 0.01714817049263963,
+      "mean_predicted_pd": 0.22552912962079188,
+      "observed_default_rate": 0.22125813449023862,
+      "prevalence_ratio": 1.0193032230900496,
+      "at_cutoff_threshold": 0.4470588266849518,
+      "at_cutoff_flagged_rate": 0.1341565159352578,
+      "at_cutoff_precision": 0.654228855721393,
+      "at_cutoff_recall": 0.39668174962292607,
+      "at_cutoff_f1": 0.49389671361502346,
+      "at_cutoff_specificity": 0.9404328262266981,
+      "at_cutoff_accuracy": 0.8201234773902887,
+      "at_cutoff_tp": 526,
+      "at_cutoff_fp": 278,
+      "at_cutoff_tn": 4389,
+      "at_cutoff_fn": 800,
+      "brier_uncalibrated": 0.13488364769108946,
+      "ece_uncalibrated": 0.013821700582251687
+    },
+    {
+      "model": "Gradient boosting (LightGBM)",
+      "val_auc": 0.7917574407257918,
+      "roc_auc": 0.7779697216197551,
+      "gini": 0.5559394432395102,
+      "pr_auc": 0.5664134112805115,
+      "ks": 0.42962687539125355,
+      "brier": 0.1351288609755009,
+      "log_loss": 0.4302373405771746,
+      "ece": 0.013611927924126051,
+      "mean_predicted_pd": 0.22439519614248754,
+      "observed_default_rate": 0.22125813449023862,
+      "prevalence_ratio": 1.0141782884479094,
+      "at_cutoff_threshold": 0.4470588266849518,
+      "at_cutoff_flagged_rate": 0.14316702819956617,
+      "at_cutoff_precision": 0.6363636363636364,
+      "at_cutoff_recall": 0.4117647058823529,
+      "at_cutoff_f1": 0.5,
+      "at_cutoff_specificity": 0.9331476323119777,
+      "at_cutoff_accuracy": 0.8177874186550976,
+      "at_cutoff_tp": 546,
+      "at_cutoff_fp": 312,
+      "at_cutoff_tn": 4355,
+      "at_cutoff_fn": 780,
+      "brier_uncalibrated": 0.13509254571161286,
+      "ece_uncalibrated": 0.014572689635475583
+    },
+    {
+      "model": "Gradient boosting (XGBoost)",
+      "val_auc": 0.7958398091151213,
+      "roc_auc": 0.7778595161754769,
+      "gini": 0.5557190323509538,
+      "pr_auc": 0.5515713231412431,
+      "ks": 0.427127053949928,
+      "brier": 0.13513681736174887,
+      "log_loss": 0.43085333298730266,
+      "ece": 0.017355260848354547,
+      "mean_predicted_pd": 0.22545326402058052,
+      "observed_default_rate": 0.22125813449023862,
+      "prevalence_ratio": 1.01896034032831,
+      "at_cutoff_threshold": 0.4470588266849518,
+      "at_cutoff_flagged_rate": 0.15384615384615385,
+      "at_cutoff_precision": 0.6182212581344902,
+      "at_cutoff_recall": 0.4298642533936652,
+      "at_cutoff_f1": 0.5071174377224199,
+      "at_cutoff_specificity": 0.9245768159417185,
+      "at_cutoff_accuracy": 0.8151176372434507,
+      "at_cutoff_tp": 570,
+      "at_cutoff_fp": 352,
+      "at_cutoff_tn": 4315,
+      "at_cutoff_fn": 756,
+      "brier_uncalibrated": 0.13471254706382751,
+      "ece_uncalibrated": 0.013101611801713884
+    }
+  ],
+  "feature_set_comparison": [
+    {
+      "feature_set": "behavioural",
+      "model": "Logistic regression",
+      "n_features": 28,
+      "roc_auc": 0.7642876025985215,
+      "gini": 0.5285752051970429,
+      "pr_auc": 0.516758830410028,
+      "ks": 0.40894768020771627,
+      "brier": 0.13805273092206086
+    },
+    {
+      "feature_set": "behavioural",
+      "model": "Gradient boosting (XGBoost)",
+      "n_features": 28,
+      "roc_auc": 0.7778595161754769,
+      "gini": 0.5557190323509538,
+      "pr_auc": 0.5515713231412431,
+      "ks": 0.427127053949928,
+      "brier": 0.13513681736174887
+    },
+    {
+      "feature_set": "origination",
+      "model": "Logistic regression",
+      "n_features": 5,
+      "roc_auc": 0.6217143991977303,
+      "gini": 0.2434287983954606,
+      "pr_auc": 0.2968504344370555,
+      "ks": 0.18406458362217826,
+      "brier": 0.16710276125978504
+    },
+    {
+      "feature_set": "origination",
+      "model": "Gradient boosting (XGBoost)",
+      "n_features": 5,
+      "roc_auc": 0.6266599089076055,
+      "gini": 0.25331981781521096,
+      "pr_auc": 0.31532189082713324,
+      "ks": 0.20034493334509718,
+      "brier": 0.16636176451281337
+    }
+  ],
+  "champion_at_cutoffs": {
+    "risk_appetite_15%_bad_rate": {
+      "threshold": 0.4470588266849518,
+      "flagged_rate": 0.15384615384615385,
+      "precision": 0.6182212581344902,
+      "recall": 0.4298642533936652,
+      "f1": 0.5071174377224199,
+      "specificity": 0.9245768159417185,
+      "accuracy": 0.8151176372434507,
+      "tp": 570,
+      "fp": 352,
+      "tn": 4315,
+      "fn": 756
+    },
+    "f1_optimal": {
+      "threshold": 0.2750000059604645,
+      "flagged_rate": 0.25379609544468545,
+      "precision": 0.5009861932938856,
+      "recall": 0.5746606334841629,
+      "f1": 0.5353003161222339,
+      "specificity": 0.8373687593743304,
+      "accuracy": 0.7792424495244452,
+      "tp": 762,
+      "fp": 759,
+      "tn": 3908,
+      "fn": 564
+    },
+    "cost_minimising": {
+      "threshold": 0.05113636329770088,
+      "flagged_rate": 0.920740864341732,
+      "precision": 0.23686118158753172,
+      "recall": 0.9856711915535445,
+      "f1": 0.3819403857393337,
+      "specificity": 0.09770730662095564,
+      "accuracy": 0.29417653929584514,
+      "tp": 1307,
+      "fp": 4211,
+      "tn": 456,
+      "fn": 19
+    },
+    "naive_0.5": {
+      "threshold": 0.5,
+      "flagged_rate": 0.12431169697980977,
+      "precision": 0.6630872483221476,
+      "recall": 0.37254901960784315,
+      "f1": 0.47706422018348627,
+      "specificity": 0.9462181272766231,
+      "accuracy": 0.819289170699149,
+      "tp": 494,
+      "fp": 251,
+      "tn": 4416,
+      "fn": 832
+    }
+  },
+  "deciles": [
+    {
+      "decile": 1,
+      "accounts": 600,
+      "defaults": 25,
+      "observed_default_rate": 0.041666666666666664,
+      "mean_predicted_pd": 0.03138430374592543,
+      "min_predicted_pd": 0.0003,
+      "max_predicted_pd": 0.05113636329770088,
+      "exposure": 90106108.75,
+      "share_of_exposure": 0.16412555135578538,
+      "lift": 0.18831699346405226,
+      "cumulative_defaults_captured": 1.0,
+      "cumulative_accounts": 1.0
+    },
+    {
+      "decile": 2,
+      "accounts": 599,
+      "defaults": 44,
+      "observed_default_rate": 0.07345575959933222,
+      "mean_predicted_pd": 0.06002010862795459,
+      "min_predicted_pd": 0.05113636329770088,
+      "max_predicted_pd": 0.07655502110719681,
+      "exposure": 77860400.95,
+      "share_of_exposure": 0.14182036503381093,
+      "lift": 0.3319912272087466,
+      "cumulative_defaults_captured": 0.9811463046757164,
+      "cumulative_accounts": 0.8998831970632405
+    },
+    {
+      "decile": 3,
+      "accounts": 599,
+      "defaults": 54,
+      "observed_default_rate": 0.09015025041736227,
+      "mean_predicted_pd": 0.0848543062209088,
+      "min_predicted_pd": 0.07655502110719681,
+      "max_predicted_pd": 0.08589951694011688,
+      "exposure": 64635477.9,
+      "share_of_exposure": 0.11773156775546786,
+      "lift": 0.4074437788470981,
+      "cumulative_defaults_captured": 0.9479638009049773,
+      "cumulative_accounts": 0.7999332554647088
+    },
+    {
+      "decile": 4,
+      "accounts": 599,
+      "defaults": 66,
+      "observed_default_rate": 0.11018363939899833,
+      "mean_predicted_pd": 0.10030100444869725,
+      "min_predicted_pd": 0.08589951694011688,
+      "max_predicted_pd": 0.1083650216460228,
+      "exposure": 59299516.35,
+      "share_of_exposure": 0.10801227520631514,
+      "lift": 0.4979868408131199,
+      "cumulative_defaults_captured": 0.9072398190045249,
+      "cumulative_accounts": 0.6999833138661772
+    },
+    {
+      "decile": 5,
+      "accounts": 600,
+      "defaults": 99,
+      "observed_default_rate": 0.165,
+      "mean_predicted_pd": 0.1467398879304528,
+      "min_predicted_pd": 0.1083650216460228,
+      "max_predicted_pd": 0.16701030731201172,
+      "exposure": 52118860.699999996,
+      "share_of_exposure": 0.09493292815647056,
+      "lift": 0.745735294117647,
+      "cumulative_defaults_captured": 0.8574660633484162,
+      "cumulative_accounts": 0.6000333722676456
+    },
+    {
+      "decile": 6,
+      "accounts": 599,
+      "defaults": 95,
+      "observed_default_rate": 0.15859766277128548,
+      "mean_predicted_pd": 0.18225634986152234,
+      "min_predicted_pd": 0.16701030731201172,
+      "max_predicted_pd": 0.19957081973552704,
+      "exposure": 44300016.65,
+      "share_of_exposure": 0.08069114024138482,
+      "lift": 0.7167992405643392,
+      "cumulative_defaults_captured": 0.7828054298642534,
+      "cumulative_accounts": 0.499916569330886
+    },
+    {
+      "decile": 7,
+      "accounts": 599,
+      "defaults": 110,
+      "observed_default_rate": 0.18363939899833054,
+      "mean_predicted_pd": 0.21095709373337995,
+      "min_predicted_pd": 0.19957081973552704,
+      "max_predicted_pd": 0.222520112991333,
+      "exposure": 41527250.65,
+      "share_of_exposure": 0.07564063084925024,
+      "lift": 0.8299780680218665,
+      "cumulative_defaults_captured": 0.7111613876319759,
+      "cumulative_accounts": 0.3999666277323544
+    },
+    {
+      "decile": 8,
+      "accounts": 599,
+      "defaults": 167,
+      "observed_default_rate": 0.27879799666110183,
+      "mean_predicted_pd": 0.2667095327317615,
+      "min_predicted_pd": 0.222520112991333,
+      "max_predicted_pd": 0.38349515199661255,
+      "exposure": 38908188.8,
+      "share_of_exposure": 0.07087008891675164,
+      "lift": 1.26005761236047,
+      "cumulative_defaults_captured": 0.6282051282051282,
+      "cumulative_accounts": 0.3000166861338228
+    },
+    {
+      "decile": 9,
+      "accounts": 599,
+      "defaults": 248,
+      "observed_default_rate": 0.41402337228714525,
+      "mean_predicted_pd": 0.44371227504614,
+      "min_predicted_pd": 0.38349515199661255,
+      "max_predicted_pd": 0.5806451439857483,
+      "exposure": 37010772.9,
+      "share_of_exposure": 0.06741400325220746,
+      "lift": 1.871223280631117,
+      "cumulative_defaults_captured": 0.502262443438914,
+      "cumulative_accounts": 0.20006674453529116
+    },
+    {
+      "decile": 10,
+      "accounts": 600,
+      "defaults": 418,
+      "observed_default_rate": 0.6966666666666667,
+      "mean_predicted_pd": 0.7272155075632731,
+      "min_predicted_pd": 0.5806451439857483,
+      "max_predicted_pd": 0.9997,
+      "exposure": 43240602.4,
+      "share_of_exposure": 0.07876144923255601,
+      "lift": 3.148660130718954,
+      "cumulative_defaults_captured": 0.3152337858220211,
+      "cumulative_accounts": 0.10011680293675955
+    }
+  ],
+  "segment_performance": [
+    {
+      "segment_type": "age_band",
+      "segment": "21-25",
+      "accounts": 775,
+      "defaults": 189,
+      "observed_default_rate": 0.24387096774193548,
+      "mean_predicted_pd": 0.27273877862108525,
+      "roc_auc": 0.7865314119580331,
+      "brier": 0.14322145289777713,
+      "calibration_gap": 0.028867810879149775
+    },
+    {
+      "segment_type": "age_band",
+      "segment": "26-30",
+      "accounts": 1427,
+      "defaults": 289,
+      "observed_default_rate": 0.2025227750525578,
+      "mean_predicted_pd": 0.20948437988345617,
+      "roc_auc": 0.7589758636836313,
+      "brier": 0.13180848261194034,
+      "calibration_gap": 0.00696160483089836
+    },
+    {
+      "segment_type": "age_band",
+      "segment": "31-35",
+      "accounts": 1141,
+      "defaults": 216,
+      "observed_default_rate": 0.18930762489044697,
+      "mean_predicted_pd": 0.19995088001641914,
+      "roc_auc": 0.7787862862862863,
+      "brier": 0.12277597872634796,
+      "calibration_gap": 0.010643255125972167
+    },
+    {
+      "segment_type": "age_band",
+      "segment": "36-40",
+      "accounts": 971,
+      "defaults": 221,
+      "observed_default_rate": 0.22760041194644695,
+      "mean_predicted_pd": 0.22205684792891098,
+      "roc_auc": 0.7568748114630468,
+      "brier": 0.14424160636264433,
+      "calibration_gap": -0.0055435640175359735
+    },
+    {
+      "segment_type": "age_band",
+      "segment": "41-50",
+      "accounts": 1209,
+      "defaults": 285,
+      "observed_default_rate": 0.23573200992555832,
+      "mean_predicted_pd": 0.2318142636109202,
+      "roc_auc": 0.7961266803372066,
+      "brier": 0.1347046332059063,
+      "calibration_gap": -0.003917746314638121
+    },
+    {
+      "segment_type": "age_band",
+      "segment": "51-60",
+      "accounts": 412,
+      "defaults": 106,
+      "observed_default_rate": 0.25728155339805825,
+      "mean_predicted_pd": 0.24913930759699018,
+      "roc_auc": 0.7912504624491306,
+      "brier": 0.1385043173630913,
+      "calibration_gap": -0.008142245801068065
+    },
+    {
+      "segment_type": "age_band",
+      "segment": "60+",
+      "accounts": 58,
+      "defaults": 20,
+      "observed_default_rate": 0.3448275862068966,
+      "mean_predicted_pd": 0.24421818753511743,
+      "roc_auc": 0.8177631578947369,
+      "brier": 0.18482662002620237,
+      "calibration_gap": -0.10060939867177915
+    },
+    {
+      "segment_type": "limit_band",
+      "segment": "Q1 lowest",
+      "accounts": 1510,
+      "defaults": 469,
+      "observed_default_rate": 0.31059602649006623,
+      "mean_predicted_pd": 0.33446124273248856,
+      "roc_auc": 0.7470254737018899,
+      "brier": 0.17341874452314904,
+      "calibration_gap": 0.023865216242422327
+    },
+    {
+      "segment_type": "limit_band",
+      "segment": "Q2",
+      "accounts": 965,
+      "defaults": 263,
+      "observed_default_rate": 0.27253886010362693,
+      "mean_predicted_pd": 0.2584391263110465,
+      "roc_auc": 0.787486594520815,
+      "brier": 0.14813734298445502,
+      "calibration_gap": -0.014099733792580449
+    },
+    {
+      "segment_type": "limit_band",
+      "segment": "Q3",
+      "accounts": 1240,
+      "defaults": 251,
+      "observed_default_rate": 0.20241935483870968,
+      "mean_predicted_pd": 0.20343916974360904,
+      "roc_auc": 0.7689122176612055,
+      "brier": 0.13260281711129432,
+      "calibration_gap": 0.0010198149048993577
+    },
+    {
+      "segment_type": "limit_band",
+      "segment": "Q4",
+      "accounts": 1069,
+      "defaults": 159,
+      "observed_default_rate": 0.14873713751169318,
+      "mean_predicted_pd": 0.16372533006911194,
+      "roc_auc": 0.7427983965719815,
+      "brier": 0.10490161894497983,
+      "calibration_gap": 0.014988192557418761
+    },
+    {
+      "segment_type": "limit_band",
+      "segment": "Q5 highest",
+      "accounts": 1209,
+      "defaults": 184,
+      "observed_default_rate": 0.152191894127378,
+      "mean_predicted_pd": 0.1401358391506747,
+      "roc_auc": 0.7710206786850476,
+      "brier": 0.10628021701308381,
+      "calibration_gap": -0.012056054976703284
+    },
+    {
+      "segment_type": "education_label",
+      "segment": "Graduate school",
+      "accounts": 2090,
+      "defaults": 375,
+      "observed_default_rate": 0.17942583732057416,
+      "mean_predicted_pd": 0.18957731945179865,
+      "roc_auc": 0.7446561710398444,
+      "brier": 0.1219290200087855,
+      "calibration_gap": 0.010151482131224493
+    },
+    {
+      "segment_type": "education_label",
+      "segment": "High school",
+      "accounts": 1044,
+      "defaults": 275,
+      "observed_default_rate": 0.26340996168582376,
+      "mean_predicted_pd": 0.25598665765197626,
+      "roc_auc": 0.7751980139496394,
+      "brier": 0.1545500154491616,
+      "calibration_gap": -0.0074233040338475
+    },
+    {
+      "segment_type": "education_label",
+      "segment": "Other",
+      "accounts": 90,
+      "defaults": 5,
+      "observed_default_rate": 0.05555555555555555,
+      "mean_predicted_pd": 0.10621742208994098,
+      "roc_auc": 0.5800000000000001,
+      "brier": 0.05946740539317858,
+      "calibration_gap": 0.050661866534385425
+    },
+    {
+      "segment_type": "education_label",
+      "segment": "University",
+      "accounts": 2769,
+      "defaults": 671,
+      "observed_default_rate": 0.24232574936800289,
+      "mean_predicted_pd": 0.24489533226591625,
+      "roc_auc": 0.7907303670091025,
+      "brier": 0.140245941501007,
+      "calibration_gap": 0.0025695828979133695
+    },
+    {
+      "segment_type": "marriage_label",
+      "segment": "Married",
+      "accounts": 2756,
+      "defaults": 663,
+      "observed_default_rate": 0.24056603773584906,
+      "mean_predicted_pd": 0.235584128828922,
+      "roc_auc": 0.7860392935151936,
+      "brier": 0.13894718005482148,
+      "calibration_gap": -0.004981908906927068
+    },
+    {
+      "segment_type": "marriage_label",
+      "segment": "Other",
+      "accounts": 65,
+      "defaults": 15,
+      "observed_default_rate": 0.23076923076923078,
+      "mean_predicted_pd": 0.2660765193689328,
+      "roc_auc": 0.6940000000000001,
+      "brier": 0.16890450511562038,
+      "calibration_gap": 0.035307288599702
+    },
+    {
+      "segment_type": "marriage_label",
+      "segment": "Single",
+      "accounts": 3172,
+      "defaults": 648,
+      "observed_default_rate": 0.2042875157629256,
+      "mean_predicted_pd": 0.215818593462752,
+      "roc_auc": 0.7707397869343197,
+      "brier": 0.13113421355149985,
+      "calibration_gap": 0.01153107769982642
+    },
+    {
+      "segment_type": "sex_label",
+      "segment": "Female",
+      "accounts": 3661,
+      "defaults": 757,
+      "observed_default_rate": 0.20677410543567332,
+      "mean_predicted_pd": 0.21602698984616556,
+      "roc_auc": 0.7931361925972831,
+      "brier": 0.12541954320945792,
+      "calibration_gap": 0.00925288441049224
+    },
+    {
+      "segment_type": "sex_label",
+      "segment": "Male",
+      "accounts": 2332,
+      "defaults": 569,
+      "observed_default_rate": 0.2439965694682676,
+      "mean_predicted_pd": 0.24025154436043183,
+      "roc_auc": 0.754285264273332,
+      "brier": 0.15039193771832565,
+      "calibration_gap": -0.0037450251078357533
+    }
+  ],
+  "stability": {
+    "by_split": [
+      {
+        "split": "train",
+        "accounts": 17979,
+        "roc_auc": 0.8114623016405241,
+        "psi_train_vs_test": 0.0007210692985334404
+      },
+      {
+        "split": "val",
+        "accounts": 5993,
+        "roc_auc": 0.7958398091151213,
+        "psi_train_vs_test": 0.0007210692985334404
+      },
+      {
+        "split": "test",
+        "accounts": 5993,
+        "roc_auc": 0.7778595161754769,
+        "psi_train_vs_test": 0.0007210692985334404
+      }
+    ],
+    "psi_train_vs_test": 0.0007210692985334404
+  },
+  "expected_loss_baseline": {
+    "accounts": 5993,
+    "total_limit": 1007540000.0,
+    "total_drawn_balance": 307743964.0,
+    "total_ead": 549007196.05,
+    "total_expected_loss": 65671322.01215652,
+    "el_rate_on_ead": 0.11961832647121734,
+    "average_pd": 0.22545326402058052,
+    "exposure_weighted_pd": 0.1840281945711036,
+    "lgd_assumed": 0.65,
+    "ccf_assumed": 0.35,
+    "observed_default_rate": 0.22125813449023862,
+    "ead_of_defaulted_accounts": 103826942.35,
+    "realised_loss_at_assumed_lgd": 67487512.5275
+  },
+  "scenarios": [
+    {
+      "scenario": "Baseline",
+      "pd_odds_multiplier": 1.0,
+      "log_odds_shift": 0.0,
+      "lgd_assumed": 0.65,
+      "ccf_assumed": 0.35,
+      "average_pd": 0.22545326402058052,
+      "exposure_weighted_pd": 0.1840281945711036,
+      "total_ead": 549007196.05,
+      "total_expected_loss": 65671322.01215652,
+      "el_rate_on_ead": 0.11961832647121734,
+      "el_vs_baseline_abs": 0.0,
+      "el_vs_baseline_pct": 0.0,
+      "narrative": "Current conditions persist. Unemployment and interest rates stay near present levels; observed default behaviour continues into the next cycle."
+    },
+    {
+      "scenario": "Moderate deterioration",
+      "pd_odds_multiplier": 1.5,
+      "log_odds_shift": 0.4054651081081644,
+      "lgd_assumed": 0.75,
+      "ccf_assumed": 0.45,
+      "average_pd": 0.28332382391807753,
+      "exposure_weighted_pd": 0.23138325862654435,
+      "total_ead": 619550704.35,
+      "total_expected_loss": 107515245.64265534,
+      "el_rate_on_ead": 0.17353744396990828,
+      "el_vs_baseline_abs": 41843923.63049883,
+      "el_vs_baseline_pct": 0.6371719397205531,
+      "narrative": "A mild recession: unemployment rises by roughly 2 percentage points and policy rates rise, raising default odds by 50% and reducing recoveries."
+    },
+    {
+      "scenario": "Severe deterioration",
+      "pd_odds_multiplier": 2.25,
+      "log_odds_shift": 0.8109302162163288,
+      "lgd_assumed": 0.85,
+      "ccf_assumed": 0.55,
+      "average_pd": 0.34945123485335056,
+      "exposure_weighted_pd": 0.28789225976915944,
+      "total_ead": 690094212.6500001,
+      "total_expected_loss": 168871864.98341328,
+      "el_rate_on_ead": 0.24470842080378552,
+      "el_vs_baseline_abs": 103200542.97125676,
+      "el_vs_baseline_pct": 1.5714704654819216,
+      "narrative": "A severe recession comparable to a supervisory stress scenario: default odds more than double, recoveries fall sharply and borrowers draw more of their undrawn credit lines before defaulting."
+    }
+  ],
+  "el_by_segment": {
+    "age_band": [
+      {
+        "age_band": "21-25",
+        "accounts": 775,
+        "mean_pd": 0.27273877862108525,
+        "total_ead": 38382981.6,
+        "expected_loss": 5577646.0180653585,
+        "observed_default_rate": 0.24387096774193548,
+        "el_rate_on_ead": 0.14531560044479083,
+        "share_of_ead": 0.06991343988960089,
+        "share_of_el": 0.08493275066143594,
+        "el_concentration": 1.2148272320107805
+      },
+      {
+        "age_band": "26-30",
+        "accounts": 1427,
+        "mean_pd": 0.20948437988345617,
+        "total_ead": 130517358.05,
+        "expected_loss": 15015027.460765513,
+        "observed_default_rate": 0.2025227750525578,
+        "el_rate_on_ead": 0.1150423796887874,
+        "share_of_ead": 0.23773341950533075,
+        "share_of_el": 0.22863903147839873,
+        "el_concentration": 0.9617454371966071
+      },
+      {
+        "age_band": "31-35",
+        "accounts": 1141,
+        "mean_pd": 0.19995088001641917,
+        "total_ead": 121749771.0,
+        "expected_loss": 12990898.643056197,
+        "observed_default_rate": 0.18930762489044697,
+        "el_rate_on_ead": 0.10670162692179681,
+        "share_of_ead": 0.22176352491545817,
+        "share_of_el": 0.1978169198520388,
+        "el_concentration": 0.8920173862110624
+      },
+      {
+        "age_band": "36-40",
+        "accounts": 971,
+        "mean_pd": 0.22205684792891098,
+        "total_ead": 99139629.05,
+        "expected_loss": 12177102.809900364,
+        "observed_default_rate": 0.22760041194644695,
+        "el_rate_on_ead": 0.12282780283310293,
+        "share_of_ead": 0.18057983531598557,
+        "share_of_el": 0.1854249684153799,
+        "el_concentration": 1.0268309752908797
+      },
+      {
+        "age_band": "41-50",
+        "accounts": 1209,
+        "mean_pd": 0.2318142636109202,
+        "total_ead": 115112600.75,
+        "expected_loss": 14006761.635327818,
+        "observed_default_rate": 0.23573200992555832,
+        "el_rate_on_ead": 0.12167878706647862,
+        "share_of_ead": 0.20967412008114425,
+        "share_of_el": 0.21328581801254137,
+        "el_concentration": 1.017225291943514
+      },
+      {
+        "age_band": "51-60",
+        "accounts": 412,
+        "mean_pd": 0.24913930759699018,
+        "total_ead": 36981980.1,
+        "expected_loss": 4982369.923119304,
+        "observed_default_rate": 0.25728155339805825,
+        "el_rate_on_ead": 0.13472426056276265,
+        "share_of_ead": 0.06736155803799687,
+        "share_of_el": 0.07586827507746852,
+        "el_concentration": 1.126284446014049
+      },
+      {
+        "age_band": "60+",
+        "accounts": 58,
+        "mean_pd": 0.24421818753511743,
+        "total_ead": 7122875.5,
+        "expected_loss": 921515.5219219645,
+        "observed_default_rate": 0.3448275862068966,
+        "el_rate_on_ead": 0.12937408802413639,
+        "share_of_ead": 0.012974102254483555,
+        "share_of_el": 0.014032236502736786,
+        "el_concentration": 1.0815574154957477
+      }
+    ],
+    "limit_band": [
+      {
+        "limit_band": "Q1 lowest",
+        "accounts": 1510,
+        "mean_pd": 0.33446124273248856,
+        "total_ead": 40190149.65,
+        "expected_loss": 8206141.964130843,
+        "observed_default_rate": 0.31059602649006623,
+        "el_rate_on_ead": 0.20418291635126676,
+        "share_of_ead": 0.0732051418253901,
+        "share_of_el": 0.12495777019094866,
+        "el_concentration": 1.7069534608511465
+      },
+      {
+        "limit_band": "Q2",
+        "accounts": 965,
+        "mean_pd": 0.2584391263110465,
+        "total_ead": 53349928.95,
+        "expected_loss": 9031198.703422463,
+        "observed_default_rate": 0.27253886010362693,
+        "el_rate_on_ead": 0.16928230048603396,
+        "share_of_ead": 0.09717528173372293,
+        "share_of_el": 0.13752119535146076,
+        "el_concentration": 1.415186999182494
+      },
+      {
+        "limit_band": "Q3",
+        "accounts": 1240,
+        "mean_pd": 0.20343916974360904,
+        "total_ead": 107191331.39999999,
+        "expected_loss": 14369280.661997376,
+        "observed_default_rate": 0.20241935483870968,
+        "el_rate_on_ead": 0.13405263722657126,
+        "share_of_ead": 0.19524576758049947,
+        "share_of_el": 0.2188060209803216,
+        "el_concentration": 1.1206697266311203
+      },
+      {
+        "limit_band": "Q4",
+        "accounts": 1069,
+        "mean_pd": 0.16372533006911194,
+        "total_ead": 124082458.3,
+        "expected_loss": 13399583.079508092,
+        "observed_default_rate": 0.14873713751169318,
+        "el_rate_on_ead": 0.10798934243478067,
+        "share_of_ead": 0.22601244426803357,
+        "share_of_el": 0.20404009952818788,
+        "el_concentration": 0.9027825887596341
+      },
+      {
+        "limit_band": "Q5 highest",
+        "accounts": 1209,
+        "mean_pd": 0.14013583915067468,
+        "total_ead": 224193327.75,
+        "expected_loss": 20665117.603097744,
+        "observed_default_rate": 0.152191894127378,
+        "el_rate_on_ead": 0.09217543541769273,
+        "share_of_ead": 0.408361364592354,
+        "share_of_el": 0.31467491394908104,
+        "el_concentration": 0.7705795435942004
+      }
+    ],
+    "education_label": [
+      {
+        "education_label": "Graduate school",
+        "accounts": 2090,
+        "mean_pd": 0.18957731945179865,
+        "total_ead": 221358809.5,
+        "expected_loss": 23090709.215672377,
+        "observed_default_rate": 0.17942583732057416,
+        "el_rate_on_ead": 0.10431348663208445,
+        "share_of_ead": 0.40319837534486536,
+        "share_of_el": 0.3516102388101464,
+        "el_concentration": 0.8720527172496805
+      },
+      {
+        "education_label": "High school",
+        "accounts": 1044,
+        "mean_pd": 0.25598665765197626,
+        "total_ead": 76068531.85,
+        "expected_loss": 10432378.670015393,
+        "observed_default_rate": 0.26340996168582376,
+        "el_rate_on_ead": 0.1371444724421271,
+        "share_of_ead": 0.13855652967264961,
+        "share_of_el": 0.15885744873666835,
+        "el_concentration": 1.1465172309957619
+      },
+      {
+        "education_label": "Other",
+        "accounts": 90,
+        "mean_pd": 0.10621742208994098,
+        "total_ead": 9942028.85,
+        "expected_loss": 591392.1576816902,
+        "observed_default_rate": 0.05555555555555555,
+        "el_rate_on_ead": 0.05948405165628645,
+        "share_of_ead": 0.018109104801414193,
+        "share_of_el": 0.009005333524003319,
+        "el_concentration": 0.49728209222689274
+      },
+      {
+        "education_label": "University",
+        "accounts": 2769,
+        "mean_pd": 0.2448953322659162,
+        "total_ead": 241637825.85,
+        "expected_loss": 31556841.96878706,
+        "observed_default_rate": 0.24232574936800289,
+        "el_rate_on_ead": 0.13059562118546955,
+        "share_of_ead": 0.4401359901810707,
+        "share_of_el": 0.480526978929182,
+        "el_concentration": 1.0917693386798353
+      }
+    ],
+    "marriage_label": [
+      {
+        "marriage_label": "Married",
+        "accounts": 2756,
+        "mean_pd": 0.23558412882892202,
+        "total_ead": 267424537.45,
+        "expected_loss": 34282150.243602686,
+        "observed_default_rate": 0.24056603773584906,
+        "el_rate_on_ead": 0.1281937348401037,
+        "share_of_ead": 0.4871057053059915,
+        "share_of_el": 0.5220261933703217,
+        "el_concentration": 1.0716897537514856
+      },
+      {
+        "marriage_label": "Other",
+        "accounts": 65,
+        "mean_pd": 0.2660765193689328,
+        "total_ead": 4487887.3,
+        "expected_loss": 603766.8218466742,
+        "observed_default_rate": 0.23076923076923078,
+        "el_rate_on_ead": 0.13453252755403958,
+        "share_of_ead": 0.008174550957236038,
+        "share_of_el": 0.009193766827701596,
+        "el_concentration": 1.1246815728224628
+      },
+      {
+        "marriage_label": "Single",
+        "accounts": 3172,
+        "mean_pd": 0.215818593462752,
+        "total_ead": 277094771.3,
+        "expected_loss": 30785404.946707163,
+        "observed_default_rate": 0.2042875157629256,
+        "el_rate_on_ead": 0.1111006346394641,
+        "share_of_ead": 0.5047197437367725,
+        "share_of_el": 0.46878003980197674,
+        "el_concentration": 0.928792752055407
+      }
+    ],
+    "sex_label": [
+      {
+        "sex_label": "Female",
+        "accounts": 3661,
+        "mean_pd": 0.21602698984616556,
+        "total_ead": 336636515.9,
+        "expected_loss": 38419162.642704815,
+        "observed_default_rate": 0.20677410543567332,
+        "el_rate_on_ead": 0.11412654548182607,
+        "share_of_ead": 0.6131732303729974,
+        "share_of_el": 0.5850219161964333,
+        "el_concentration": 0.9540891337356011
+      },
+      {
+        "sex_label": "Male",
+        "accounts": 2332,
+        "mean_pd": 0.24025154436043183,
+        "total_ead": 212370680.15,
+        "expected_loss": 27252159.3694517,
+        "observed_default_rate": 0.2439965694682676,
+        "el_rate_on_ead": 0.12832354894848558,
+        "share_of_ead": 0.38682676962700263,
+        "share_of_el": 0.4149780838035667,
+        "el_concentration": 1.0727749897032952
+      }
+    ]
+  },
+  "decision_rule_cost_minimising": {
+    "threshold": 0.05113636329770088,
+    "approval_rate": 0.07925913565826798,
+    "decline_rate": 0.920740864341732,
+    "accounts_declined": 5518,
+    "bad_rate_of_approved": 0.04,
+    "bad_rate_of_declined": 0.23686118158753172,
+    "bad_rate_no_cutoff": 0.22125813449023862,
+    "defaults_avoided": 1307,
+    "defaults_retained": 19,
+    "good_accounts_declined": 4211,
+    "loss_avoided_at_assumed_lgd": 65580778.25,
+    "loss_retained_at_assumed_lgd": 1906734.2775,
+    "forgone_margin_assumed": 12628851.899999999,
+    "net_benefit_assumed": 52951926.35,
+    "lgd_assumed": 0.65,
+    "margin_assumed": 0.06
+  },
+  "decision_rule": {
+    "threshold": 0.4470588266849518,
+    "approval_rate": 0.8461538461538461,
+    "decline_rate": 0.15384615384615385,
+    "accounts_declined": 922,
+    "bad_rate_of_approved": 0.1490830211003747,
+    "bad_rate_of_declined": 0.6182212581344902,
+    "bad_rate_no_cutoff": 0.22125813449023862,
+    "defaults_avoided": 570,
+    "defaults_retained": 756,
+    "good_accounts_declined": 352,
+    "loss_avoided_at_assumed_lgd": 26158004.73,
+    "loss_retained_at_assumed_lgd": 41329507.7975,
+    "forgone_margin_assumed": 971119.14,
+    "net_benefit_assumed": 25186885.59,
+    "lgd_assumed": 0.65,
+    "margin_assumed": 0.06
+  },
+  "odds_ratios_top": [
+    {
+      "feature": "months_2plus_delinquent",
+      "coefficient_log_odds": 0.6991163459194453,
+      "odds_ratio": 2.0119740326556603,
+      "direction": "increases risk"
+    },
+    {
+      "feature": "education_label_Other",
+      "coefficient_log_odds": -0.6039310617246619,
+      "odds_ratio": 0.5466584585869682,
+      "direction": "reduces risk"
+    },
+    {
+      "feature": "util_max",
+      "coefficient_log_odds": -0.39065626287595,
+      "odds_ratio": 0.6766126929723892,
+      "direction": "reduces risk"
+    },
+    {
+      "feature": "months_delinquent",
+      "coefficient_log_odds": -0.36982103354572565,
+      "odds_ratio": 0.6908579599737764,
+      "direction": "reduces risk"
+    },
+    {
+      "feature": "dpd_latest",
+      "coefficient_log_odds": 0.3547819204443569,
+      "odds_ratio": 1.425869667349306,
+      "direction": "increases risk"
+    },
+    {
+      "feature": "util_mean",
+      "coefficient_log_odds": 0.3079520974217177,
+      "odds_ratio": 1.360635809412655,
+      "direction": "increases risk"
+    },
+    {
+      "feature": "log_limit_bal",
+      "coefficient_log_odds": -0.2923844008338133,
+      "odds_ratio": 0.746481532691148,
+      "direction": "reduces risk"
+    },
+    {
+      "feature": "full_payer_months",
+      "coefficient_log_odds": 0.26989516908503336,
+      "odds_ratio": 1.3098271331589924,
+      "direction": "increases risk"
+    },
+    {
+      "feature": "bill_latest",
+      "coefficient_log_odds": 0.24633085735012072,
+      "odds_ratio": 1.2793227768718165,
+      "direction": "increases risk"
+    },
+    {
+      "feature": "pay_ratio_mean",
+      "coefficient_log_odds": -0.22652600336597345,
+      "odds_ratio": 0.7972986095958926,
+      "direction": "reduces risk"
+    },
+    {
+      "feature": "dpd_max",
+      "coefficient_log_odds": 0.21915005784437644,
+      "odds_ratio": 1.2450180874013792,
+      "direction": "increases risk"
+    },
+    {
+      "feature": "marriage_label_Single",
+      "coefficient_log_odds": -0.18360469038589408,
+      "odds_ratio": 0.8322647410599852,
+      "direction": "reduces risk"
+    }
+  ],
+  "permutation_importance_top": [
+    {
+      "feature": "dpd_latest",
+      "auc_drop_mean": 0.032705000709386894,
+      "auc_drop_std": 0.0044012337308035375
+    },
+    {
+      "feature": "dpd_max",
+      "auc_drop_mean": 0.014088441000174173,
+      "auc_drop_std": 0.002508002045555444
+    },
+    {
+      "feature": "available_credit",
+      "auc_drop_mean": 0.013560884952949395,
+      "auc_drop_std": 0.001764637437047118
+    },
+    {
+      "feature": "bill_mean",
+      "auc_drop_mean": 0.008006437646179768,
+      "auc_drop_std": 0.0021914874359920816
+    },
+    {
+      "feature": "bill_latest",
+      "auc_drop_mean": 0.007329884080678098,
+      "auc_drop_std": 0.0014011730537149872
+    },
+    {
+      "feature": "months_2plus_delinquent",
+      "auc_drop_mean": 0.002563862196656233,
+      "auc_drop_std": 0.0007796628459363451
+    },
+    {
+      "feature": "log_limit_bal",
+      "auc_drop_mean": 0.0025127083682774665,
+      "auc_drop_std": 0.0008991856373827525
+    },
+    {
+      "feature": "education_label",
+      "auc_drop_mean": 0.0018016954024938497,
+      "auc_drop_std": 0.0006520865462752118
+    },
+    {
+      "feature": "inactive_months",
+      "auc_drop_mean": 0.0017610248266041462,
+      "auc_drop_std": 0.0003935924557133889
+    },
+    {
+      "feature": "paid_to_billed_6m",
+      "auc_drop_mean": 0.00128426912621947,
+      "auc_drop_std": 0.00033100447253935924
+    },
+    {
+      "feature": "months_delinquent",
+      "auc_drop_mean": 0.0011904450263895278,
+      "auc_drop_std": 0.0008129096004785274
+    },
+    {
+      "feature": "pay_ratio_min",
+      "auc_drop_mean": 0.0011376651829329426,
+      "auc_drop_std": 0.0011379151008859697
+    }
+  ],
+  "shap_top": [
+    {
+      "feature": "dpd_latest",
+      "mean_abs_shap": 0.35384896397590637,
+      "mean_shap": -0.09446122497320175
+    },
+    {
+      "feature": "dpd_max",
+      "mean_abs_shap": 0.27732783555984497,
+      "mean_shap": -0.01761891320347786
+    },
+    {
+      "feature": "available_credit",
+      "mean_abs_shap": 0.13992027938365936,
+      "mean_shap": -0.0220099575817585
+    },
+    {
+      "feature": "bill_mean",
+      "mean_abs_shap": 0.13194628059864044,
+      "mean_shap": -0.00861533172428608
+    },
+    {
+      "feature": "bill_latest",
+      "mean_abs_shap": 0.1313580721616745,
+      "mean_shap": -0.017600897699594498
+    },
+    {
+      "feature": "months_2plus_delinquent",
+      "mean_abs_shap": 0.11008170247077942,
+      "mean_shap": -0.02938629686832428
+    },
+    {
+      "feature": "log_limit_bal",
+      "mean_abs_shap": 0.07719127833843231,
+      "mean_shap": -0.007325373589992523
+    },
+    {
+      "feature": "pay_ratio_min",
+      "mean_abs_shap": 0.07053402811288834,
+      "mean_shap": -0.013171459548175335
+    },
+    {
+      "feature": "months_delinquent",
+      "mean_abs_shap": 0.06295861303806305,
+      "mean_shap": -0.008211873471736908
+    },
+    {
+      "feature": "pay_ratio_mean",
+      "mean_abs_shap": 0.05897210165858269,
+      "mean_shap": -0.00030076500843279064
+    },
+    {
+      "feature": "marriage_label_Single",
+      "mean_abs_shap": 0.05471266806125641,
+      "mean_shap": -0.0013685348676517606
+    },
+    {
+      "feature": "paid_to_billed_6m",
+      "mean_abs_shap": 0.05248234421014786,
+      "mean_shap": -0.008212543092668056
+    }
+  ],
+  "figures": {
+    "roc": "figures/roc_curves.png",
+    "pr": "figures/pr_curves.png",
+    "model_comparison": "figures/model_comparison.png",
+    "scores": "figures/score_distribution.png",
+    "calibration": "figures/calibration.png",
+    "deciles": "figures/decile_default_rates.png",
+    "confusion": "figures/confusion_matrix.png",
+    "cutoff": "figures/cutoff_net_cost.png",
+    "el_decile": "figures/el_by_decile.png",
+    "scenarios": "figures/scenario_comparison.png",
+    "sensitivity": "figures/sensitivity_heatmap.png",
+    "el_limit_band": "figures/el_by_limit_band.png",
+    "el_age": "figures/el_by_age_band.png",
+    "odds": "figures/logistic_odds_ratios.png",
+    "permutation": "figures/permutation_importance.png",
+    "shap": "figures/shap_importance.png",
+    "delinquency": "figures/delinquency_profile.png",
+    "by_limit": "figures/default_rate_by_limit.png",
+    "by_age": "figures/default_rate_by_age.png",
+    "by_education": "figures/default_rate_by_education.png"
+  },
+  "headline": {
+    "champion": "Gradient boosting (XGBoost)",
+    "test_accounts": 5993,
+    "test_default_rate": 0.22125813449023862,
+    "champion_roc_auc": 0.7778595161754769,
+    "champion_gini": 0.5557190323509538,
+    "champion_pr_auc": 0.5515713231412431,
+    "champion_ks": 0.427127053949928,
+    "champion_brier": 0.13513681736174887,
+    "champion_ece": 0.017355260848354547,
+    "logreg_roc_auc": 0.7642876025985215,
+    "logreg_pr_auc": 0.516758830410028,
+    "logreg_brier": 0.13805273092206086,
+    "auc_gain_over_logreg": 0.013571913576955419,
+    "top_decile_default_rate": 0.6966666666666667,
+    "bottom_decile_default_rate": 0.041666666666666664,
+    "top_decile_lift": 3.148660130718954,
+    "top_two_deciles_capture": 0.502262443438914,
+    "policy_cutoff": 0.4470588266849518,
+    "policy_approval_rate": 0.8461538461538461,
+    "policy_bad_rate_approved": 0.1490830211003747,
+    "policy_bad_rate_no_cutoff": 0.22125813449023862,
+    "policy_recall": 0.4298642533936652,
+    "policy_precision": 0.6182212581344902,
+    "portfolio_ead": 549007196.05,
+    "portfolio_el": 65671322.01215652,
+    "portfolio_el_rate": 0.11961832647121734,
+    "severe_el": 168871864.98341328,
+    "severe_el_uplift_pct": 1.5714704654819216,
+    "moderate_el": 107515245.64265534,
+    "moderate_el_uplift_pct": 0.6371719397205531
+  }
+}

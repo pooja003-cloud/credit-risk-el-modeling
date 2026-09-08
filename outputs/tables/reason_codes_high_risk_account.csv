@@ -1,0 +1,6 @@
+feature,feature_value,shap_value,effect
+dpd_latest,3.0,1.004028,raises PD
+dpd_max,7.0,0.45646578,raises PD
+months_2plus_delinquent,6.0,0.32207975,raises PD
+log_limit_bal,9.210440366976517,0.15651028,raises PD
+bill_latest,2300.0,0.15127337,raises PD

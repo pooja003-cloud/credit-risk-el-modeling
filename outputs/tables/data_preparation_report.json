@@ -1,0 +1,40 @@
+{
+  "source_file": "default_of_credit_card_clients.csv",
+  "integrity_checks": {
+    "rows": 30000,
+    "columns": 25,
+    "defaults": 6636,
+    "default_rate": 0.2212,
+    "missing_values": 0,
+    "duplicate_ids": 0,
+    "duplicate_rows_excl_id": 35
+  },
+  "cleaning": {
+    "rows_in": 30000,
+    "education_codes_recoded_to_other": 468,
+    "marriage_codes_recoded_to_other": 377,
+    "duplicate_rows_dropped": 35,
+    "rows_out": 29965,
+    "default_rate_after_clean": 0.22125813449023862,
+    "negative_bill_amounts": 3932
+  },
+  "n_features_behavioural": 28,
+  "n_features_origination": 5,
+  "splits": {
+    "train": {
+      "rows": 17979,
+      "defaults": 3978,
+      "default_rate": 0.22125813449023862
+    },
+    "val": {
+      "rows": 5993,
+      "defaults": 1326,
+      "default_rate": 0.22125813449023862
+    },
+    "test": {
+      "rows": 5993,
+      "defaults": 1326,
+      "default_rate": 0.22125813449023862
+    }
+  }
+}
