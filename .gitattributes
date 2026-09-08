@@ -1,0 +1,15 @@
+# Language statistics and diff behaviour.
+#
+# GitHub's Linguist counts bytes per language, so generated artefacts committed for
+# convenience would otherwise misrepresent what this project is. Everything marked below is
+# reproducible output, not source: `python -m src.run_pipeline` and
+# `python -m src.build_static_dashboard` regenerate all of it.
+
+# Self-contained dashboard snapshot: ~1.5 MB, with every figure embedded as a base64 PNG.
+dashboard/dashboard.html linguist-generated=true
+
+# Pipeline outputs: figures, tables and the results file the reports are built from.
+outputs/** linguist-generated=true
+
+# The UCI dataset is data, not source.
+data/raw/*.csv linguist-generated=true

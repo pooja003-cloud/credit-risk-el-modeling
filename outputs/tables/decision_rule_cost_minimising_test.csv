@@ -1,0 +1,2 @@
+threshold,approval_rate,decline_rate,accounts_declined,bad_rate_of_approved,bad_rate_of_declined,bad_rate_no_cutoff,defaults_avoided,defaults_retained,good_accounts_declined,loss_avoided_at_assumed_lgd,loss_retained_at_assumed_lgd,forgone_margin_assumed,net_benefit_assumed,lgd_assumed,margin_assumed
+0.05113636329770088,0.07925913565826798,0.920740864341732,5518,0.04,0.23686118158753172,0.22125813449023862,1307,19,4211,65580778.25,1906734.2775,12628851.899999999,52951926.35,0.65,0.06

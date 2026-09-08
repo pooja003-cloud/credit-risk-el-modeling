@@ -1,0 +1,6 @@
+feature,feature_value,shap_value,effect
+education_label_Other,1.0,-0.505837,lowers PD
+available_credit,311232.0,-0.31311625,lowers PD
+dpd_latest,0.0,-0.29434085,lowers PD
+dpd_max,0.0,-0.22212814,lowers PD
+bill_mean,71943.83333333333,-0.19774088,lowers PD

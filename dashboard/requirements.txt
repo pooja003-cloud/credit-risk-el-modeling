@@ -1,0 +1,17 @@
+# Dependencies for the Streamlit dashboard only.
+#
+# Streamlit Community Cloud installs from the requirements file next to the entrypoint,
+# so this keeps the hosted app to the five packages it actually needs. The modelling
+# stack - scikit-learn, XGBoost, LightGBM, SHAP - is not required: the dashboard reads
+# the CSV tables in outputs/tables/ that the pipeline has already written, and refits
+# nothing. Installing those here would slow every deploy and add build failures for
+# libraries the app never imports.
+#
+# The full environment for re-running the pipeline is in the repository-root
+# requirements.txt.
+
+streamlit>=1.49
+plotly>=5.20
+pandas>=2.2,<4
+numpy>=1.26,<3
+matplotlib>=3.8    # optional: pandas uses it to shade table cells; the app degrades without it
