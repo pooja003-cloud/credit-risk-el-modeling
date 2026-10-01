@@ -1,0 +1,9 @@
+feature,records_checked,max_abs_difference,max_relative_discrepancy,passes
+log_limit_bal,25,0.0,0.0,True
+util_latest,25,0.0,0.0,True
+available_credit,25,0.0,0.0,True
+dpd_latest,25,0.0,0.0,True
+dpd_max,25,0.0,0.0,True
+months_delinquent,25,0.0,0.0,True
+pay_ratio_latest,25,0.0,0.0,True
+bill_latest,25,0.0,0.0,True

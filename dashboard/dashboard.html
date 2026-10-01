@@ -111,12 +111,12 @@ a { color: var(--accent); }
   held-out test fold of 5,993 accounts that no model saw during training,
   selection or calibration.</p>
   <p class="meta">Champion model: <strong>Gradient boosting (XGBoost)</strong> &middot; pipeline run
-  2026-09-08 &middot; page generated 2026-09-08 &middot; amounts in
+  2026-10-01 &middot; page generated 2026-10-01 &middot; amounts in
   New Taiwan dollars &middot; static snapshot; the Streamlit app in <code>dashboard/app.py</code>
   is the interactive version.</p>
 </header>
 
-<div class="tiles"><div class="tile"><div class="label">Exposure at default</div><div class="value">NT$549.0m</div><div class="sub">5,993 held-out accounts</div></div><div class="tile"><div class="label">Expected loss, baseline</div><div class="value">NT$65.7m</div><div class="sub">11.96% of exposure</div></div><div class="tile"><div class="label">Expected loss, severe</div><div class="value">NT$168.9m</div><div class="sub">+157% versus baseline</div></div><div class="tile"><div class="label">Model ROC-AUC</div><div class="value">0.778</div><div class="sub">Gini 0.556 &#183; KS 0.427</div></div><div class="tile"><div class="label">Riskiest decile</div><div class="value">70%</div><div class="sub">3.1x the portfolio rate</div></div><div class="tile"><div class="label">Approved book at cutoff</div><div class="value">14.9%</div><div class="sub">from 22.1%, approving 85%</div></div></div>
+<div class="tiles"><div class="tile"><div class="label">Exposure at default</div><div class="value">NT$549.0m</div><div class="sub">5,993 held-out accounts</div></div><div class="tile"><div class="label">Expected loss, baseline (1 month)</div><div class="value">NT$65.7m</div><div class="sub">11.96% of exposure</div></div><div class="tile"><div class="label">Expected loss, severe (1 month)</div><div class="value">NT$168.9m</div><div class="sub">+157% versus baseline</div></div><div class="tile"><div class="label">Model ROC-AUC</div><div class="value">0.778</div><div class="sub">Gini 0.556 &#183; KS 0.427</div></div><div class="tile"><div class="label">Riskiest decile</div><div class="value">70%</div><div class="sub">3.1x the portfolio rate</div></div><div class="tile"><div class="label">Approved book at cutoff</div><div class="value">14.9%</div><div class="sub">from 22.1%, approving 85%</div></div></div>
 
 <div class="note"><strong>What is estimated and what is assumed.</strong> The probability of
 default is estimated from the data. Loss given default is <em>not</em>: this dataset contains no
@@ -192,10 +192,15 @@ crisis. A 22% default rate is not a through-the-cycle rate.</li>
 repayment history and cannot be used at origination.</li>
 <li><strong>No macroeconomic variables.</strong> Unemployment and interest rates enter only
 through the scenario multipliers, not as model inputs.</li>
-<li><strong>Demographic inputs.</strong> Sex, education and marital status appear in the dataset
-and are used here for segment monitoring. Several are prohibited or restricted inputs for credit
-decisions in many jurisdictions; a deployable model would exclude them and be tested for
-disparate impact.</li>
+<li><strong>Demographic inputs.</strong> Sex, education and marital status are inputs to the
+model, not only reporting segments. Several are prohibited or restricted for credit decisions in
+many jurisdictions; a deployable model would drop them and be tested for disparate impact.</li>
+<li><strong>One-month horizon.</strong> Every PD is the chance of default next month, so expected
+loss is a one-month figure, not a 12-month or lifetime one.</li>
+<li><strong>Default definition.</strong> The source gives no days-past-due threshold. If some
+defaults cure, the assumed LGD overstates loss.</li>
+<li><strong>Self-assessed.</strong> Reviewed against model-risk frameworks by the developer, not
+independently. Approved with conditions for reporting, not for credit decisions.</li>
 </ul>
 
 <footer>Built from the UCI Default of Credit Card Clients dataset. Portfolio project &mdash; not

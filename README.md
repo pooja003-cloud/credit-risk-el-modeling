@@ -15,7 +15,8 @@ how far behind the customer fell.
 
 The second part turns that probability into money. Expected loss is the probability of default
 multiplied by the exposure at the moment of default and by the share of that exposure the
-lender never recovers. I compute it per account and add it up.
+lender never recovers. I compute it per account and add it up. Because the model predicts
+default *next month*, this is a one-month expected loss, not a 12-month or lifetime figure.
 
 The third part re-runs the loss calculation with worse assumptions: more defaults, lower
 recoveries, and borrowers drawing down more of their credit line before they stop paying.
@@ -65,8 +66,9 @@ Abbreviations are in the [glossary](#glossary) at the end.
 | Riskiest decile default rate | **70%** vs 4.2% in the safest decile (3.1x lift) |
 | Defaults captured in the riskiest two deciles | 50% |
 | Portfolio exposure at default (test fold) | NT$549.0m |
-| Baseline expected loss | NT$65.7m (11.96% of exposure) |
-| Severe-scenario expected loss | NT$168.9m (+157%) |
+| Baseline expected loss, one month | NT$65.7m (11.96% of exposure) |
+| Severe-scenario expected loss, one month | NT$168.9m (+157%) |
+| Model validation | 10/10 deciles pass binomial test at 99%; calibration slope 0.91 ([report](docs/model_validation_report.md)) |
 
 What those measures mean. ROC-AUC: draw one defaulter and one non-defaulter at random, and ask
 how often the model scores the defaulter higher. 0.778 means about
@@ -93,6 +95,8 @@ carries.
 | Executive summary | [`docs/executive_summary.md`](docs/executive_summary.md) |
 | Two-page risk memo | [`docs/risk_memo.md`](docs/risk_memo.md) |
 | Model card | [`docs/model_card.md`](docs/model_card.md) |
+| Model validation report | [`docs/model_validation_report.md`](docs/model_validation_report.md) |
+| Model risk and limitations appendix (one page) | [`docs/model_risk_appendix.md`](docs/model_risk_appendix.md) |
 | Data dictionary | [`docs/data_dictionary.md`](docs/data_dictionary.md) |
 | Interactive risk dashboard | **[Open the live app](https://credit-risk-el-modeling.streamlit.app)**. Move the LGD, credit-conversion-factor, stress and cutoff sliders and every figure recomputes. Source: [`dashboard/app.py`](dashboard/app.py) |
 | Static risk dashboard | **[View it live](https://pooja003-cloud.github.io/credit-risk-el-modeling/dashboard/dashboard.html)**, or open [`dashboard/dashboard.html`](dashboard/dashboard.html) locally |
@@ -301,11 +305,15 @@ On the test fold: NT$549.0m of exposure at default, against
 NT$307.7m of drawn balances and NT$1,007.5m of committed
 limits.
 
+All of this is a one-month horizon: the expected loss over October 2005.
+
 One partial check on that number. Holding LGD fixed, the loss implied by the accounts that
 actually defaulted is NT$67.5m, against a modelled
 NT$65.7m, a
-2.7% gap. That tests PD
-and EAD against outcomes. It says nothing about whether 65% is the right LGD.
+2.7% gap. I first
+described this as testing PD and EAD, but the same EAD and LGD sit on both sides and cancel, so
+it only tests PD calibration weighted by exposure. The gap has a specific cause, covered under
+[Model validation](#model-validation).
 
 ### Scenario analysis
 
@@ -326,6 +334,38 @@ wherever they appear.
 ![Expected loss under three scenarios](outputs/figures/scenario_comparison.png)
 
 ![Sensitivity of expected loss](outputs/figures/sensitivity_heatmap.png)
+
+---
+
+## Model validation
+
+I reviewed the finished model against two published model-risk frameworks: a validator layout
+(five review domains, findings with severity) and an SR 11-7 governance layout. The tests ran on
+the held-out test fold. Because I built the model, this is a self-assessment against those
+frameworks rather than an independent validation.
+
+| Test | Result |
+| --- | --- |
+| Discrimination | ROC-AUC 0.778 against a 0.70 threshold |
+| Binomial backtest by decile, 99% | 10 of 10 pass |
+| Hosmer-Lemeshow | 16.8; p = 0.079 (10 df), 0.032 (8 df). Borderline |
+| Calibration slope | 0.91 (1.0 is ideal) |
+| Actual-to-expected, by account / by exposure | 0.981 / 1.028 |
+| Champion vs challenger, expected loss | 1.9% apart, inside the 5% tolerance |
+| Data lineage, 25 records traced to the raw file | 0.0% discrepancy |
+
+The calibration slope is the interesting one. Below 1 means predictions are slightly too spread
+out: too low for the safest accounts, too high for the riskiest. Counted by account that nets
+out conservative. But the safest accounts carry the biggest balances, so weighted by exposure
+the model is optimistic, by about 2.7%. That is
+exactly the back-test gap above.
+
+The review turned up 12 findings. Three were documentation errors and are fixed: expected loss had no stated horizon,
+the back-test was described as testing more than it does, and the scenario narratives quoted
+macroeconomic figures the model never uses. The rest are open and listed with severities in
+the [validation report](docs/model_validation_report.md). The opinion, in the
+[one-page appendix](docs/model_risk_appendix.md), is approval with conditions for research and
+portfolio reporting, and not for credit decisions.
 
 ---
 
@@ -386,9 +426,13 @@ credit-risk-el-modeling/
 - LGD is assumed rather than estimated, and every currency figure inherits that.
 - No macroeconomic variables. Unemployment and rates enter only through the scenario
   multipliers, not as model inputs.
-- Sex, education and marital status are in the dataset and are used here for segment
-  monitoring. Several are prohibited or restricted inputs for credit decisions in many
-  jurisdictions. A deployable model would drop them and be tested for disparate impact.
+- Sex, education and marital status are inputs to the model, not just reporting segments.
+  Several are prohibited or restricted for credit decisions in many jurisdictions. A deployable
+  model would drop them and be tested for disparate impact.
+- The source defines default only as "default payment next month", with no days-past-due
+  threshold. If some of those accounts cure, a charge-off-scale 65% LGD
+  overstates loss, so the expected-loss figures are better read as an upper bound.
+- Validation was done by the developer, not independently.
 
 ---
 
@@ -426,6 +470,10 @@ In the order the terms first matter, not alphabetical.
 | **Stress scenario** | A deliberately worse set of assumptions (more defaults, lower recoveries) used to size losses in a downturn. |
 | **Log-odds** | The scale credit scores live on. Stressing a model on this scale keeps every probability between 0% and 100% and moves risky and safe accounts proportionately. |
 | **Isotonic / Platt scaling** | Two standard methods for correcting a model's predicted probabilities after training. |
+| **Calibration slope** | Fitted slope of outcomes on the model's log-odds. 1.0 is ideal; below 1 means predictions are too spread out. |
+| **Actual-to-expected (A/E)** | Observed defaults divided by predicted defaults. Above 1 means the model under-predicted. Can be weighted by account or by exposure. |
+| **Binomial backtest** | Checks whether each risk band's observed default count is plausible given its predicted PD, here at 99% confidence. |
+| **Hosmer-Lemeshow test** | A chi-squared test comparing observed and predicted defaults across risk groups. Very sensitive on large samples. |
 | **PSI**, population stability index | How far a scored population has drifted from the one the model was built on. Below 0.10 is stable. |
 | **SHAP** | A method that attributes a single prediction to its individual inputs, so a score can be explained account by account. |
 | **Champion / challenger** | The model in use, and the simpler or rival model kept alongside it as a benchmark. |

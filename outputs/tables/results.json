@@ -1,5 +1,5 @@
 {
-  "generated_on": "2026-09-08",
+  "generated_on": "2026-10-01",
   "data": {
     "source_file": "default_of_credit_card_clients.csv",
     "integrity_checks": {
@@ -493,14 +493,14 @@
     },
     {
       "model": "Random forest",
-      "val_auc": 0.7937471176105391,
+      "val_auc": 0.7937416234974813,
       "roc_auc": 0.7751533423113606,
       "gini": 0.5503066846227211,
       "pr_auc": 0.5348916244592291,
       "ks": 0.4120104866459119,
       "brier": 0.13538303356449213,
       "log_loss": 0.43235210718114403,
-      "ece": 0.01714817049263963,
+      "ece": 0.017148170492639617,
       "mean_predicted_pd": 0.22552912962079188,
       "observed_default_rate": 0.22125813449023862,
       "prevalence_ratio": 1.0193032230900496,
@@ -1096,7 +1096,7 @@
       "el_rate_on_ead": 0.11961832647121734,
       "el_vs_baseline_abs": 0.0,
       "el_vs_baseline_pct": 0.0,
-      "narrative": "Current conditions persist. Unemployment and interest rates stay near present levels; observed default behaviour continues into the next cycle."
+      "narrative": "Hypothetical. Conditions in the observation window continue: the model's PDs are used as estimated, with baseline LGD and credit conversion factor."
     },
     {
       "scenario": "Moderate deterioration",
@@ -1111,7 +1111,7 @@
       "el_rate_on_ead": 0.17353744396990828,
       "el_vs_baseline_abs": 41843923.63049883,
       "el_vs_baseline_pct": 0.6371719397205531,
-      "narrative": "A mild recession: unemployment rises by roughly 2 percentage points and policy rates rise, raising default odds by 50% and reducing recoveries."
+      "narrative": "Hypothetical mild downturn. Default odds rise 50%, recoveries fall and borrowers draw more of their undrawn line. Severity is judgemental; no macroeconomic variable is modelled."
     },
     {
       "scenario": "Severe deterioration",
@@ -1126,7 +1126,7 @@
       "el_rate_on_ead": 0.24470842080378552,
       "el_vs_baseline_abs": 103200542.97125676,
       "el_vs_baseline_pct": 1.5714704654819216,
-      "narrative": "A severe recession comparable to a supervisory stress scenario: default odds more than double, recoveries fall sharply and borrowers draw more of their undrawn credit lines before defaulting."
+      "narrative": "Hypothetical severe downturn. Default odds rise 2.25x, recoveries fall sharply and borrowers draw most of their undrawn line before defaulting. Severity is judgemental and not calibrated to any supervisory scenario."
     }
   ],
   "el_by_segment": {
@@ -1627,6 +1627,126 @@
       "mean_shap": -0.008212543092668056
     }
   ],
+  "validation": {
+    "hosmer_lemeshow": {
+      "statistic": 16.810131242797063,
+      "df_in_sample": 8,
+      "p_value_in_sample_df": 0.03214802469730892,
+      "df_out_of_sample": 10,
+      "p_value_out_of_sample_df": 0.07867229527122031
+    },
+    "calibration": {
+      "calibration_slope": 0.9058453803702032,
+      "calibration_intercept": -0.13005553226170263,
+      "predicted_rate_count_weighted": 0.22545326402058052,
+      "observed_rate_count_weighted": 0.22125813449023862,
+      "ae_ratio_count_weighted": 0.9813924648704179,
+      "predicted_rate_exposure_weighted": 0.1840281945711036,
+      "observed_rate_exposure_weighted": 0.1891176346995352,
+      "ae_ratio_exposure_weighted": 1.0276557629676966
+    },
+    "binomial": {
+      "confidence": 0.99,
+      "bands_passing": 10,
+      "bands_total": 10,
+      "failing_deciles": []
+    },
+    "champion_vs_challenger": {
+      "champion_mean_pd": 0.22545326402058052,
+      "challenger_mean_pd": 0.22377296109772649,
+      "mean_pd_relative_gap": 0.007508963167896843,
+      "champion_el": 65671322.01215652,
+      "challenger_el": 64435084.04497647,
+      "el_relative_gap": 0.01918578962847528,
+      "tolerance": 0.05,
+      "within_tolerance": true,
+      "account_mean_abs_gap_pp": 4.901299074961115,
+      "account_p90_abs_gap_pp": 11.488020847715637,
+      "share_within_5pp": 0.6596028700150175,
+      "rank_correlation": 0.8888138183877662
+    },
+    "sensitivity_most_sensitive": {
+      "input": "dpd_latest",
+      "label": "Latest months past due",
+      "shock_type": "months",
+      "shock": 1.0,
+      "mean_pd_change": 0.2494930137825213
+    },
+    "sensitivity_ranking": [
+      {
+        "input": "dpd_latest",
+        "label": "Latest months past due",
+        "shock_type": "months",
+        "shock": 1.0,
+        "mean_pd_change": 0.2494930137825213
+      },
+      {
+        "input": "dpd_max",
+        "label": "Worst months past due",
+        "shock_type": "months",
+        "shock": -1.0,
+        "mean_pd_change": -0.10324279125484725
+      },
+      {
+        "input": "months_2plus_delinquent",
+        "label": "Months 2+ cycles late",
+        "shock_type": "months",
+        "shock": 1.0,
+        "mean_pd_change": 0.05345673951914942
+      },
+      {
+        "input": "log_limit_bal",
+        "label": "Credit limit",
+        "shock_type": "proportional",
+        "shock": -0.5,
+        "mean_pd_change": 0.03911300840914422
+      },
+      {
+        "input": "bill_latest",
+        "label": "Latest bill",
+        "shock_type": "proportional",
+        "shock": -0.5,
+        "mean_pd_change": 0.032214621331950744
+      },
+      {
+        "input": "available_credit",
+        "label": "Available credit",
+        "shock_type": "proportional",
+        "shock": -0.5,
+        "mean_pd_change": 0.025063759435591138
+      },
+      {
+        "input": "bill_mean",
+        "label": "Average bill (6 months)",
+        "shock_type": "proportional",
+        "shock": -0.5,
+        "mean_pd_change": 0.02318822380543306
+      },
+      {
+        "input": "pay_ratio_min",
+        "label": "Lowest payment ratio",
+        "shock_type": "proportional",
+        "shock": 0.5,
+        "mean_pd_change": -0.019295559329373102
+      },
+      {
+        "input": "util_mean",
+        "label": "Average utilisation",
+        "shock_type": "proportional",
+        "shock": 0.5,
+        "mean_pd_change": -0.002683301826060136
+      }
+    ],
+    "lineage": {
+      "records": 25,
+      "features_checked": 8,
+      "tolerance": 0.005,
+      "all_pass": true,
+      "worst_relative_discrepancy": 0.0
+    },
+    "auc_threshold": 0.7,
+    "independent": false
+  },
   "figures": {
     "roc": "figures/roc_curves.png",
     "pr": "figures/pr_curves.png",

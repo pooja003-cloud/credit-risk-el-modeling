@@ -42,7 +42,8 @@ produces the repository's published numbers.
 7. Expected loss: `EL = PD x LGD x EAD`
 8. Scenario analysis
 9. What drives the score
-10. Limitations"""),
+10. Model validation
+11. Limitations"""),
 
     md("""## 1. The question, and what would count as an answer
 
@@ -365,9 +366,11 @@ pd.Series(summary).to_frame("value")"""),
 
     md("""### A partial check on the loss number
 
-The PD and EAD components can be tested against outcomes, even though LGD cannot. Holding the
-LGD assumption fixed, the loss implied by the accounts that actually defaulted should be close
-to the modelled expected loss."""),
+Horizon first: the model predicts default in the following month, so this is a one-month
+expected loss, not a 12-month or lifetime figure.
+
+LGD cannot be tested here, but PD can. Holding LGD fixed, the loss implied by the accounts that
+actually defaulted should be close to the modelled expected loss."""),
 
     code("""modelled = summary["total_expected_loss"]
 realised = summary["realised_loss_at_assumed_lgd"]
@@ -375,8 +378,11 @@ print(f"Modelled expected loss:                 {C.CURRENCY}{modelled:,.0f}")
 print(f"Loss implied by actual defaults (same LGD): {C.CURRENCY}{realised:,.0f}")
 print(f"Gap: {modelled / realised - 1:+.2%}")"""),
 
-    md("""Close. That validates PD and EAD together. It says **nothing** about whether the 65% LGD
-assumption is right - only that if it were right, the loss estimate would be about right."""),
+    md("""Close, but read it carefully. The same EAD and the same LGD appear on both sides, so they
+cancel: this only checks PD calibration weighted by exposure. It says nothing about EAD, and
+nothing about whether 65% is the right LGD.
+
+The gap is not noise either. Section 10 traces it to a specific calibration pattern."""),
 
     code("""by_band = EL.el_by_risk_band(el_base)
 by_band.style.format({
@@ -464,7 +470,65 @@ pd.read_csv(C.TABLES / "reason_codes_high_risk_account.csv").style.format({
     "feature_value": "{:.3f}", "shap_value": "{:+.3f}"
 })"""),
 
-    md("""## 10. Limitations
+    md("""## 10. Model validation
+
+The finished model was reviewed against a model-risk validator framework and an SR 11-7
+governance framework. The full write-up, with twelve findings and severities, is in
+`docs/model_validation_report.md`. Here are the tests themselves, run on the test fold.
+
+These were run by the person who built the model, so they are a self-assessment."""),
+
+    code("""from src import validation as V
+
+champ = load_model("behavioural", champion, calibrated=True)
+chall = load_model("behavioural", "Logistic regression", calibrated=True)
+ead = el_base["ead"].to_numpy()
+
+hl = V.hosmer_lemeshow(y_test, p_test)
+print(f"Hosmer-Lemeshow {hl['statistic']:.2f}:  p = {hl['p_value_out_of_sample_df']:.3f} "
+      f"({hl['df_out_of_sample']} df),  p = {hl['p_value_in_sample_df']:.3f} ({hl['df_in_sample']} df)")
+hl["groups"].style.format({"observed_defaults": "{:.0f}", "expected_defaults": "{:.1f}",
+                           "contribution": "{:.2f}"})"""),
+
+    md("""Borderline: it passes at 5% with 10 degrees of freedom, the usual choice when the model is
+scored on data it wasn't fitted on, and fails with the stricter in-sample 8. With 600 accounts
+per group the test is very sensitive, so the pattern in the table matters more than the
+p-value. Observed defaults are *above* expected in the safest groups and *below* in the
+riskiest."""),
+
+    code("""V.binomial_by_decile(y_test, p_test).style.format({
+    "expected_defaults": "{:.1f}", "mean_predicted_pd": "{:.2%}",
+    "observed_default_rate": "{:.2%}", "p_value": "{:.3f}"})"""),
+
+    code("""diag = V.calibration_diagnostics(y_test, p_test, ead)
+pd.Series(diag).to_frame("value")"""),
+
+    md("""This is the most useful result in the section. A calibration slope below 1 means the
+predictions are a little too spread out. By account count that nets out slightly conservative
+(actual-to-expected below 1). But the safest accounts carry the biggest balances, so weighted by
+exposure the model is slightly *optimistic* (above 1). Expected loss is exposure-weighted, so it
+inherits the optimism. That is the back-test gap in section 7."""),
+
+    code("""cc = V.champion_vs_challenger(p_test, chall.predict_proba(test[feats])[:, 1], ead, C.LGD_BASELINE)
+pd.Series(cc).to_frame("value")"""),
+
+    md("""Champion and challenger agree on portfolio loss to within the 5% tolerance, but a third of
+accounts differ by more than 5 percentage points. Model choice barely moves the loss total and
+matters a lot account by account."""),
+
+    code("""sens = V.input_sensitivity(champ, test, feats, ead)
+V.sensitivity_ranking(sens).style.format({"mean_pd_change": "{:+.1%}"})"""),
+
+    md("""One extra month of latest arrears moves mean PD by about a quarter. No 50% shock to any
+continuous input comes close. The model leans heavily on one field, so that field needs its own
+data-quality controls."""),
+
+    code("""lineage = V.data_lineage_trace(test)
+print(f"{lineage['records']} records, {lineage['features_checked']} features, "
+      f"worst discrepancy {lineage['worst_relative_discrepancy']:.2%}")
+lineage["table"]"""),
+
+    md("""## 11. Limitations
 
 1. **One cohort, one outcome month.** No out-of-time validation; the split is
    stratified-random, not time-based.
@@ -473,10 +537,12 @@ pd.read_csv(C.TABLES / "reason_codes_high_risk_account.csv").style.format({
 3. **Behavioural, not application.** The champion model needs six months of repayment history.
 4. **LGD is assumed.** Every currency figure inherits that assumption one-for-one.
 5. **No macroeconomic variables.** Unemployment and rates enter only as scenario multipliers.
-6. **Demographic inputs.** Sex, education and marital status are present in the data and are
-   used here for segment monitoring. Several are prohibited or restricted inputs for credit
-   decisions in many jurisdictions; a deployable model would exclude them and be tested for
-   disparate impact.
+6. **Demographic inputs.** Sex, education and marital status are inputs to the model, not only
+   reporting segments. Several are prohibited or restricted for credit decisions in many
+   jurisdictions; a deployable model would drop them and be tested for disparate impact.
+7. **Default definition.** The source gives no days-past-due threshold. If some flagged accounts
+   cure, a charge-off-scale LGD overstates loss.
+8. **Not independently validated.** Section 10 is a self-assessment.
 
 ### Next steps
 

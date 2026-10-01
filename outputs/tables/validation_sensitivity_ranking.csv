@@ -1,0 +1,10 @@
+input,label,shock_type,shock,mean_pd_change
+dpd_latest,Latest months past due,months,1.0,0.2494930137825213
+dpd_max,Worst months past due,months,-1.0,-0.10324279125484725
+months_2plus_delinquent,Months 2+ cycles late,months,1.0,0.05345673951914942
+log_limit_bal,Credit limit,proportional,-0.5,0.03911300840914422
+bill_latest,Latest bill,proportional,-0.5,0.032214621331950744
+available_credit,Available credit,proportional,-0.5,0.025063759435591138
+bill_mean,Average bill (6 months),proportional,-0.5,0.02318822380543306
+pay_ratio_min,Lowest payment ratio,proportional,0.5,-0.019295559329373102
+util_mean,Average utilisation,proportional,0.5,-0.002683301826060136

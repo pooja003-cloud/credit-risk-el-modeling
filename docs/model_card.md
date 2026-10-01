@@ -60,6 +60,15 @@ delinquency); anything dated in or after the October 2005 outcome month.
 `default.payment.next.month` - default on the October 2005 payment. Base rate 22.13% after
 cleaning.
 
+**Horizon: one month.** Every PD is the probability of default in the month after the
+observation window, and expected loss built from it is a one-month figure. It is not comparable
+to a 12-month (IFRS 9 Stage 1) or lifetime (CECL) estimate without a different label or a
+term-structure assumption.
+
+**Definition.** The source gives no days-past-due threshold for "default payment". If the label
+behaves more like a missed payment than a terminal default, some flagged accounts will cure, and
+a charge-off-scale LGD overstates their loss.
+
 ## Performance
 
 Reported on the held-out test fold; the exact figures are regenerated into the
@@ -125,6 +134,14 @@ reviewer can see where the model is weaker rather than only a portfolio-level av
    there are noisy, and segments below 50 accounts or 5 defaults are suppressed entirely.
 7. **Mild optimism.** Train ROC-AUC exceeds test ROC-AUC by roughly 0.03. Consistent with light
    over-fitting that the validation-fold selection did not fully remove.
+
+## Validation
+
+Reviewed against a model-risk validator framework and an SR 11-7 governance framework:
+[`model_validation_report.md`](model_validation_report.md) has the findings and test results,
+[`model_risk_appendix.md`](model_risk_appendix.md) the one-page opinion, conditions and
+monitoring. The review was run by the developer, so it is a self-assessment, not an independent
+validation.
 
 ## Monitoring plan (if it were deployed)
 

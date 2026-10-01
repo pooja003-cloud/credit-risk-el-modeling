@@ -14,6 +14,7 @@ from datetime import date
 import pandas as pd
 
 from . import config as C
+from .build_validation_docs import findings
 
 
 def _load():
@@ -53,6 +54,8 @@ def build_readme(r: dict) -> str:
     prep = r["data"]
     stab = {s["split"]: s["roc_auc"] for s in r["stability"]["by_split"]}
     champ_cal = r["training"]["behavioural"]["models"][h["champion"]]["calibration_method"]
+    v = r["validation"]
+    vcal, vhl, vbin, vcc = v["calibration"], v["hosmer_lemeshow"], v["binomial"], v["champion_vs_challenger"]
 
     comp = pd.read_csv(C.TABLES / "model_comparison.csv")
     comp_md = md_table(
@@ -124,7 +127,8 @@ how far behind the customer fell.
 
 The second part turns that probability into money. Expected loss is the probability of default
 multiplied by the exposure at the moment of default and by the share of that exposure the
-lender never recovers. I compute it per account and add it up.
+lender never recovers. I compute it per account and add it up. Because the model predicts
+default *next month*, this is a one-month expected loss, not a 12-month or lifetime figure.
 
 The third part re-runs the loss calculation with worse assumptions: more defaults, lower
 recoveries, and borrowers drawing down more of their credit line before they stop paying.
@@ -174,8 +178,9 @@ Abbreviations are in the [glossary](#glossary) at the end.
 | Riskiest decile default rate | **{h['top_decile_default_rate']:.0%}** vs {h['bottom_decile_default_rate']:.1%} in the safest decile ({h['top_decile_lift']:.1f}x lift) |
 | Defaults captured in the riskiest two deciles | {h['top_two_deciles_capture']:.0%} |
 | Portfolio exposure at default (test fold) | {money(el['total_ead'])} |
-| Baseline expected loss | {money(el['total_expected_loss'])} ({el['el_rate_on_ead']:.2%} of exposure) |
-| Severe-scenario expected loss | {money(h['severe_el'])} ({h['severe_el_uplift_pct']:+.0%}) |
+| Baseline expected loss, one month | {money(el['total_expected_loss'])} ({el['el_rate_on_ead']:.2%} of exposure) |
+| Severe-scenario expected loss, one month | {money(h['severe_el'])} ({h['severe_el_uplift_pct']:+.0%}) |
+| Model validation | {vbin['bands_passing']}/{vbin['bands_total']} deciles pass binomial test at 99%; calibration slope {vcal['calibration_slope']:.2f} ([report](docs/model_validation_report.md)) |
 
 What those measures mean. ROC-AUC: draw one defaulter and one non-defaulter at random, and ask
 how often the model scores the defaulter higher. {h['champion_roc_auc']:.3f} means about
@@ -202,6 +207,8 @@ carries.
 | Executive summary | [`docs/executive_summary.md`](docs/executive_summary.md) |
 | Two-page risk memo | [`docs/risk_memo.md`](docs/risk_memo.md) |
 | Model card | [`docs/model_card.md`](docs/model_card.md) |
+| Model validation report | [`docs/model_validation_report.md`](docs/model_validation_report.md) |
+| Model risk and limitations appendix (one page) | [`docs/model_risk_appendix.md`](docs/model_risk_appendix.md) |
 | Data dictionary | [`docs/data_dictionary.md`](docs/data_dictionary.md) |
 | Interactive risk dashboard | **[Open the live app](https://credit-risk-el-modeling.streamlit.app)**. Move the LGD, credit-conversion-factor, stress and cutoff sliders and every figure recomputes. Source: [`dashboard/app.py`](dashboard/app.py) |
 | Static risk dashboard | **[View it live](https://pooja003-cloud.github.io/credit-risk-el-modeling/dashboard/dashboard.html)**, or open [`dashboard/dashboard.html`](dashboard/dashboard.html) locally |
@@ -382,11 +389,15 @@ On the test fold: {money(el['total_ead'])} of exposure at default, against
 {money(el['total_drawn_balance'])} of drawn balances and {money(el['total_limit'])} of committed
 limits.
 
+All of this is a one-month horizon: the expected loss over October 2005.
+
 One partial check on that number. Holding LGD fixed, the loss implied by the accounts that
 actually defaulted is {money(el['realised_loss_at_assumed_lgd'])}, against a modelled
 {money(el['total_expected_loss'])}, a
-{abs(el['total_expected_loss'] / el['realised_loss_at_assumed_lgd'] - 1):.1%} gap. That tests PD
-and EAD against outcomes. It says nothing about whether {C.LGD_BASELINE:.0%} is the right LGD.
+{abs(el['total_expected_loss'] / el['realised_loss_at_assumed_lgd'] - 1):.1%} gap. I first
+described this as testing PD and EAD, but the same EAD and LGD sit on both sides and cancel, so
+it only tests PD calibration weighted by exposure. The gap has a specific cause, covered under
+[Model validation](#model-validation).
 
 ### Scenario analysis
 
@@ -403,6 +414,38 @@ wherever they appear.
 ![Expected loss under three scenarios](outputs/figures/scenario_comparison.png)
 
 ![Sensitivity of expected loss](outputs/figures/sensitivity_heatmap.png)
+
+---
+
+## Model validation
+
+I reviewed the finished model against two published model-risk frameworks: a validator layout
+(five review domains, findings with severity) and an SR 11-7 governance layout. The tests ran on
+the held-out test fold. Because I built the model, this is a self-assessment against those
+frameworks rather than an independent validation.
+
+| Test | Result |
+| --- | --- |
+| Discrimination | ROC-AUC {h['champion_roc_auc']:.3f} against a 0.70 threshold |
+| Binomial backtest by decile, 99% | {vbin['bands_passing']} of {vbin['bands_total']} pass |
+| Hosmer-Lemeshow | {vhl['statistic']:.1f}; p = {vhl['p_value_out_of_sample_df']:.3f} ({vhl['df_out_of_sample']} df), {vhl['p_value_in_sample_df']:.3f} ({vhl['df_in_sample']} df). Borderline |
+| Calibration slope | {vcal['calibration_slope']:.2f} (1.0 is ideal) |
+| Actual-to-expected, by account / by exposure | {vcal['ae_ratio_count_weighted']:.3f} / {vcal['ae_ratio_exposure_weighted']:.3f} |
+| Champion vs challenger, expected loss | {vcc['el_relative_gap']:.1%} apart, inside the 5% tolerance |
+| Data lineage, 25 records traced to the raw file | {v['lineage']['worst_relative_discrepancy']:.1%} discrepancy |
+
+The calibration slope is the interesting one. Below 1 means predictions are slightly too spread
+out: too low for the safest accounts, too high for the riskiest. Counted by account that nets
+out conservative. But the safest accounts carry the biggest balances, so weighted by exposure
+the model is optimistic, by about {1 - 1 / vcal['ae_ratio_exposure_weighted']:.1%}. That is
+exactly the back-test gap above.
+
+The review turned up {len(findings(r))} findings. Three were documentation errors and are fixed: expected loss had no stated horizon,
+the back-test was described as testing more than it does, and the scenario narratives quoted
+macroeconomic figures the model never uses. The rest are open and listed with severities in
+the [validation report](docs/model_validation_report.md). The opinion, in the
+[one-page appendix](docs/model_risk_appendix.md), is approval with conditions for research and
+portfolio reporting, and not for credit decisions.
 
 ---
 
@@ -463,9 +506,13 @@ credit-risk-el-modeling/
 - LGD is assumed rather than estimated, and every currency figure inherits that.
 - No macroeconomic variables. Unemployment and rates enter only through the scenario
   multipliers, not as model inputs.
-- Sex, education and marital status are in the dataset and are used here for segment
-  monitoring. Several are prohibited or restricted inputs for credit decisions in many
-  jurisdictions. A deployable model would drop them and be tested for disparate impact.
+- Sex, education and marital status are inputs to the model, not just reporting segments.
+  Several are prohibited or restricted for credit decisions in many jurisdictions. A deployable
+  model would drop them and be tested for disparate impact.
+- The source defines default only as "default payment next month", with no days-past-due
+  threshold. If some of those accounts cure, a charge-off-scale {C.LGD_BASELINE:.0%} LGD
+  overstates loss, so the expected-loss figures are better read as an upper bound.
+- Validation was done by the developer, not independently.
 
 ---
 
@@ -503,6 +550,10 @@ In the order the terms first matter, not alphabetical.
 | **Stress scenario** | A deliberately worse set of assumptions (more defaults, lower recoveries) used to size losses in a downturn. |
 | **Log-odds** | The scale credit scores live on. Stressing a model on this scale keeps every probability between 0% and 100% and moves risky and safe accounts proportionately. |
 | **Isotonic / Platt scaling** | Two standard methods for correcting a model's predicted probabilities after training. |
+| **Calibration slope** | Fitted slope of outcomes on the model's log-odds. 1.0 is ideal; below 1 means predictions are too spread out. |
+| **Actual-to-expected (A/E)** | Observed defaults divided by predicted defaults. Above 1 means the model under-predicted. Can be weighted by account or by exposure. |
+| **Binomial backtest** | Checks whether each risk band's observed default count is plausible given its predicted PD, here at 99% confidence. |
+| **Hosmer-Lemeshow test** | A chi-squared test comparing observed and predicted defaults across risk groups. Very sensitive on large samples. |
 | **PSI**, population stability index | How far a scored population has drifted from the one the model was built on. Below 0.10 is stable. |
 | **SHAP** | A method that attributes a single prediction to its individual inputs, so a score can be explained account by account. |
 | **Champion / challenger** | The model in use, and the simpler or rival model kept alongside it as a benchmark. |
@@ -561,8 +612,9 @@ The probabilities are calibrated as well as ordered: expected calibration error
 {h['champion_ece']:.4f}, Brier score {h['champion_brier']:.4f}. That is what makes them usable
 in a loss calculation at all.
 
-Baseline expected loss is **{money(el['total_expected_loss'])}** on {money(el['total_ead'])} of
-exposure ({el['el_rate_on_ead']:.2%}). Under a severe scenario, where default odds more than
+Baseline expected loss over one month is **{money(el['total_expected_loss'])}** on
+{money(el['total_ead'])} of exposure ({el['el_rate_on_ead']:.2%}). The model predicts default in
+the following month, so this is not a 12-month or lifetime figure. Under a severe scenario, where default odds more than
 double and recoveries fall, it reaches {money(h['severe_el'])}
 ({h['severe_el_uplift_pct']:+.0%}).
 
@@ -603,6 +655,10 @@ decile alone accounts for
   card-debt crisis. A {h['test_default_rate']:.0%} default rate is not a through-the-cycle rate.
 - No live decisions were made and no lending outcome was improved. The cutoff analysis is a
   retrospective evaluation on held-out data.
+- Default is defined only as "default payment next month", with no days-past-due threshold. If
+  some of those accounts cure, the assumed LGD overstates loss.
+- The model's own developer ran the validation. It is approved with conditions for reporting,
+  not for credit decisions; see the [model risk appendix](model_risk_appendix.md).
 
 ## Recommended next steps
 
@@ -630,6 +686,11 @@ def build_risk_memo(r: dict) -> str:
     ms = pd.read_csv(C.TABLES / "cutoff_margin_sensitivity.csv")
     segperf = pd.read_csv(C.TABLES / "segment_performance.csv")
     weakest = segperf.sort_values("roc_auc").iloc[0]
+    v = r["validation"]
+    cal = v["calibration"]
+    top_driver = v["sensitivity_ranking"][0]
+    orig_auc = pd.read_csv(C.TABLES / "feature_set_comparison.csv").query(
+        "feature_set=='origination'")["roc_auc"].max()
 
     # State rank-ordering exactly as observed rather than asserting monotonicity.
     dec = pd.read_csv(C.TABLES / "risk_deciles.csv").sort_values("decile")
@@ -656,20 +717,26 @@ held-out test fold
 
 ---
 
-## 1. Recommendation
+## 1. Recommendation: APPROVE WITH CONDITIONS
 
-Adopt the calibrated gradient-boosting PD model as the **behavioural** risk-ranking engine for
-this portfolio - for limit management, collections prioritisation and expected-loss reporting -
-and set the decline cutoff at a predicted PD of **{th['policy_cutoff_from_validation']:.1%}**,
-which holds the approved book's default rate at the {th['policy_target_bad_rate']:.0%} appetite
-target. Do **not** use it as an application scorecard: it depends on repayment history that does
-not exist at origination.
+Approve the calibrated gradient-boosting PD model for **one-month expected-loss reporting and
+portfolio risk analysis** on this book. Do not use it for credit decisions yet. Three conditions
+stand in the way, set out in the [model risk appendix](model_risk_appendix.md): sex, education
+and marital status are model inputs; there has been no out-of-time test; and the validation was
+not independent.
 
-Keep the logistic-regression scorecard as challenger and reporting benchmark. It reaches
-{h['logreg_roc_auc']:.3f} ROC-AUC against the champion's {h['champion_roc_auc']:.3f}, a gap of
-{h['auc_gain_over_logreg']:+.4f}, and it stays interpretable without tooling. The committee
-should decide explicitly whether that gap justifies a model that needs SHAP to explain one
-decision.
+The {th['policy_cutoff_from_validation']:.1%} PD cutoff in section 3 is a **proposed** policy for
+when those conditions are met. It is not a recommendation to start declining accounts.
+
+The model is behavioural. It needs six months of repayment history, so it cannot score new
+applicants. Keep the logistic-regression scorecard as challenger: {h['logreg_roc_auc']:.3f}
+ROC-AUC against {h['champion_roc_auc']:.3f}, a gap of {h['auc_gain_over_logreg']:+.4f}, and
+interpretable without tooling.
+
+**Rating rationale.** Positive: strong discrimination, a binomial pass in all ten risk
+deciles at 99%, inputs traced exactly to source, and loss assumptions stated wherever they are
+used. Negative: a one-month horizon only, a default label with no days-past-due definition,
+slight optimism by exposure, and heavy reliance on a single input.
 
 ## 2. Model performance
 
@@ -693,10 +760,8 @@ and the top two deciles capture {h['top_two_deciles_capture']:.0%} of defaults.
 validation fold before they are used anywhere. After calibration, mean predicted PD is
 {el['average_pd']:.2%} against an observed {h['test_default_rate']:.2%}.
 
-**Segment performance.** Discrimination holds across borrower segments; the weakest is
-"{weakest['segment']}" ({weakest['segment_type'].replace('_', ' ')}) at
-{weakest['roc_auc']:.3f} ROC-AUC on {int(weakest['accounts']):,} accounts. No segment collapses
-to random.
+**Segments.** The weakest is "{weakest['segment']}" ({weakest['segment_type'].replace('_', ' ')}),
+{weakest['roc_auc']:.3f} ROC-AUC on {int(weakest['accounts']):,} accounts. None falls to random.
 
 ## 3. The two errors
 
@@ -707,7 +772,8 @@ to random.
 Under the working assumptions these differ by roughly a factor of ten, which is why the 0.5
 cutoff that `predict()` returns by default is the wrong place to stand.
 
-At the recommended {th['policy_cutoff_from_validation']:.1%} cutoff, applied to the test fold:
+At the proposed {th['policy_cutoff_from_validation']:.1%} cutoff, applied retrospectively to the
+test fold:
 
 | | |
 | --- | --- |
@@ -718,22 +784,20 @@ At the recommended {th['policy_cutoff_from_validation']:.1%} cutoff, applied to 
 | Good accounts turned away | {d['good_accounts_declined']:,} |
 | Precision / recall at the cutoff | {h['policy_precision']:.3f} / {h['policy_recall']:.3f} |
 
-This is a **retrospective evaluation on held-out data**. No live decisions were made, the
-declined accounts were in fact extended credit, and no claim is made that lending outcomes
-improved.
+No live decisions were made and every declined account was in fact given credit, so this
+shows what the rule would have done, not that lending improved.
 
-**Why not the cost-minimising cutoff?** Minimising modelled net cost implies a
-{th['cost_optimal_from_validation']:.1%} cutoff - declining most of the book
-({dc['decline_rate']:.0%}). That is an artefact of comparing a one-period loss against one
-period of margin: as the assumed margin rises from {ms['assumed_margin_on_good_account'].iloc[0]:.0%}
-to {ms['assumed_margin_on_good_account'].iloc[-1]:.0%}, the implied cutoff moves from
-{ms['implied_cutoff'].iloc[0]:.0%} to {ms['implied_cutoff'].iloc[-1]:.0%} and the approval rate
-from {ms['approval_rate'].iloc[0]:.0%} to {ms['approval_rate'].iloc[-1]:.0%}. The cutoff should
-therefore be set by risk appetite, with the cost calculation used as a sensitivity.
+A purely cost-minimising cutoff would sit at {th['cost_optimal_from_validation']:.1%} and decline
+{dc['decline_rate']:.0%} of the book. That comes from weighing one period of loss against one
+period of margin, and it swings from {ms['implied_cutoff'].iloc[0]:.0%} to
+{ms['implied_cutoff'].iloc[-1]:.0%} as the assumed margin changes. Risk appetite is the more
+stable anchor.
 
 ## 4. Expected credit loss
 
-`EL = PD x LGD x EAD`, on the test fold, baseline assumptions:
+`EL = PD x LGD x EAD`, on the test fold, baseline assumptions. **Horizon: one month.** Every
+PD is the chance of default in October 2005, so this is one month's expected loss, not a
+12-month or lifetime figure.
 
 | | |
 | --- | --- |
@@ -746,9 +810,11 @@ therefore be set by risk appetite, with the cost calculation used as a sensitivi
 
 **Partial back-test.** Holding LGD fixed, the loss implied by the accounts that actually
 defaulted is {money(el['realised_loss_at_assumed_lgd'])} against a modelled
-{money(el['total_expected_loss'])}, within
-{abs(el['total_expected_loss'] / el['realised_loss_at_assumed_lgd'] - 1):.1%}. That checks PD and
-EAD against outcomes. It says nothing about the LGD assumption.
+{money(el['total_expected_loss'])}, {abs(el['total_expected_loss'] / el['realised_loss_at_assumed_lgd'] - 1):.1%}
+lower. The same EAD and LGD sit on both sides and cancel, so this checks only exposure-weighted
+PD calibration. The gap is real: low-risk accounts are slightly under-predicted and carry the
+largest balances, so the model is optimistic by exposure even though it is conservative by
+account count.
 
 ### Scenarios
 
@@ -765,31 +831,35 @@ The planning figure for the committee is the severe scenario, roughly
 `outputs/tables/sensitivity_grid.csv` shows that a substantial share of that movement comes from
 the LGD assumption rather than from the model.
 
-## 5. Key risks in using this model
+## 5. Risks and mitigants
 
-1. **LGD is assumed, not estimated.** Every currency figure scales with it. Sourcing recovery
-   data is the highest-value next step.
-2. **Single cohort.** One six-month window and one outcome month. No out-of-time validation is
-   possible, so the reported PSI of {r['stability']['psi_train_vs_test']:.4f} is a formality, not
-   evidence of through-time stability.
-3. **Regime.** Taiwan 2005 followed a domestic card-debt crisis; a {h['test_default_rate']:.0%}
-   default rate should not be read across to another portfolio.
-4. **Behavioural dependency.** The model degrades to roughly
-   {pd.read_csv(C.TABLES / 'feature_set_comparison.csv').query("feature_set=='origination'")['roc_auc'].max():.2f}
-   ROC-AUC without repayment history. Any application-time use would be a misuse.
-5. **Protected characteristics.** Sex, education and marital status are present in the data and
-   are used here only for segment monitoring. They are prohibited or restricted inputs for credit
-   decisions in many jurisdictions and must be removed, with disparate-impact testing on what
-   remains, before deployment.
+1. **Risk:** default is defined only as "default payment next month", with no days-past-due
+   threshold, while LGD is a charge-off-scale {C.LGD_BASELINE:.0%}. If some defaults cure, loss
+   is overstated.
+   **Mitigant:** treat the figures as an upper bound; the PD-stress by LGD grid shows the range.
+2. **Risk:** LGD is assumed, not estimated, and every currency figure scales with it.
+   **Mitigant:** stated wherever it is used; recovery data is the first thing to source.
+3. **Risk:** calibration slope of {cal['calibration_slope']:.2f}; loss understated by about
+   {1 - 1 / cal['ae_ratio_exposure_weighted']:.1%} by exposure.
+   **Mitigant:** all ten deciles pass the binomial backtest; monitor exposure-weighted
+   actual-to-expected quarterly.
+4. **Risk:** one more month of latest arrears moves mean PD {top_driver['mean_pd_change']:+.0%}, so
+   errors in that field flow straight into loss.
+   **Mitigant:** lineage check traces it to source exactly; monitor its distribution monthly.
+5. **Risk:** sex, education and marital status are **model inputs**, restricted or prohibited for
+   credit decisions in many jurisdictions.
+   **Mitigant:** not approved for decisioning; removal and disparate-impact testing are conditions.
+6. **Risk:** one cohort, one outcome month, Taiwan 2005; PSI of
+   {r['stability']['psi_train_vs_test']:.4f} reflects a random split, not stability over time.
+   Without repayment history the model falls to {orig_auc:.2f} ROC-AUC.
+   **Mitigant:** use restricted to this book and to existing accounts; out-of-time test required
+   before production.
 
-## 6. Monitoring, if deployed
+## 6. Monitoring
 
-- Monthly PSI on the score distribution; investigate above 0.10, escalate above 0.25.
-- Quarterly recalibration check: predicted versus observed default rate by decile.
-- Track the approved book's default rate against the {th['policy_target_bad_rate']:.0%} appetite
-  target and re-set the cutoff when it drifts.
-- Annual challenger comparison against the logistic scorecard; retire the champion if the gap
-  closes.
+Monitoring indicators, triggers and the revalidation cycle are in the
+[model risk appendix](model_risk_appendix.md). Full findings are in the
+[validation report](model_validation_report.md).
 
 ---
 
@@ -801,10 +871,14 @@ Reproduce with `python -m src.run_pipeline`.*
 def build_all() -> list[str]:
     r = _load()
     written = []
+    from .build_validation_docs import build_model_risk_appendix, build_validation_report
+
     for path, content in [
         (C.ROOT / "README.md", build_readme(r)),
         (C.DOCS / "executive_summary.md", build_executive_summary(r)),
         (C.DOCS / "risk_memo.md", build_risk_memo(r)),
+        (C.DOCS / "model_validation_report.md", build_validation_report(r)),
+        (C.DOCS / "model_risk_appendix.md", build_model_risk_appendix(r)),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")

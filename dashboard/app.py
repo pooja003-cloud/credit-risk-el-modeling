@@ -198,8 +198,10 @@ st.caption(
 k = st.columns(5)
 k[0].metric("Exposure at default", money(total_ead),
             help="Drawn balance plus the assumed drawn share of the undrawn line.")
-k[1].metric("Expected loss", money(total_el),
-            f"{total_el / total_ead:.2%} of exposure" if total_ead else "-")
+k[1].metric("Expected loss, one month", money(total_el),
+            f"{total_el / total_ead:.2%} of exposure" if total_ead else "-",
+            help="The model predicts default in the following month, so this is a one-month "
+                 "expected loss, not a 12-month or lifetime figure.")
 k[2].metric("Exposure-weighted PD", f"{np.average(acc['pd_stressed'], weights=acc['ead_live']):.1%}")
 k[3].metric("Approval rate at cutoff", f"{approved.mean():.1%}",
             f"{int((~approved).sum()):,} accounts declined", delta_color="off")
@@ -688,10 +690,15 @@ with tabs[5]:
 - **Behavioural, not application.** The champion model needs six months of repayment history.
 - **No macro variables.** Unemployment and interest rates enter only through the scenario
   multipliers, not as model inputs.
-- **Demographic inputs.** Sex, education and marital status are in the dataset and are used
-  here for segment monitoring. Several of them are prohibited or restricted inputs for credit
-  decisions in many jurisdictions; a deployable model would exclude them and be tested for
-  disparate impact.
+- **Demographic inputs.** Sex, education and marital status are inputs to the model, not only
+  reporting segments. Several are prohibited or restricted for credit decisions in many
+  jurisdictions; a deployable model would drop them and be tested for disparate impact.
+- **One-month horizon.** Every PD is the chance of default next month, so expected loss is a
+  one-month figure.
+- **Default definition.** The source gives no days-past-due threshold. If some defaults cure, the
+  assumed LGD overstates loss.
+- **Self-assessed.** The model was reviewed against model-risk frameworks by its developer, not
+  independently. It is approved with conditions for reporting, not for credit decisions.
 """
     )
 

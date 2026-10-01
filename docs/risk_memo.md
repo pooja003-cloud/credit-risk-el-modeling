@@ -9,20 +9,26 @@ held-out test fold
 
 ---
 
-## 1. Recommendation
+## 1. Recommendation: APPROVE WITH CONDITIONS
 
-Adopt the calibrated gradient-boosting PD model as the **behavioural** risk-ranking engine for
-this portfolio - for limit management, collections prioritisation and expected-loss reporting -
-and set the decline cutoff at a predicted PD of **44.7%**,
-which holds the approved book's default rate at the 15% appetite
-target. Do **not** use it as an application scorecard: it depends on repayment history that does
-not exist at origination.
+Approve the calibrated gradient-boosting PD model for **one-month expected-loss reporting and
+portfolio risk analysis** on this book. Do not use it for credit decisions yet. Three conditions
+stand in the way, set out in the [model risk appendix](model_risk_appendix.md): sex, education
+and marital status are model inputs; there has been no out-of-time test; and the validation was
+not independent.
 
-Keep the logistic-regression scorecard as challenger and reporting benchmark. It reaches
-0.764 ROC-AUC against the champion's 0.778, a gap of
-+0.0136, and it stays interpretable without tooling. The committee
-should decide explicitly whether that gap justifies a model that needs SHAP to explain one
-decision.
+The 44.7% PD cutoff in section 3 is a **proposed** policy for
+when those conditions are met. It is not a recommendation to start declining accounts.
+
+The model is behavioural. It needs six months of repayment history, so it cannot score new
+applicants. Keep the logistic-regression scorecard as challenger: 0.764
+ROC-AUC against 0.778, a gap of +0.0136, and
+interpretable without tooling.
+
+**Rating rationale.** Positive: strong discrimination, a binomial pass in all ten risk
+deciles at 99%, inputs traced exactly to source, and loss assumptions stated wherever they are
+used. Negative: a one-month horizon only, a default label with no days-past-due definition,
+slight optimism by exposure, and heavy reliance on a single input.
 
 ## 2. Model performance
 
@@ -46,10 +52,8 @@ and the top two deciles capture 50% of defaults.
 validation fold before they are used anywhere. After calibration, mean predicted PD is
 22.55% against an observed 22.13%.
 
-**Segment performance.** Discrimination holds across borrower segments; the weakest is
-"Other" (education label) at
-0.580 ROC-AUC on 90 accounts. No segment collapses
-to random.
+**Segments.** The weakest is "Other" (education label),
+0.580 ROC-AUC on 90 accounts. None falls to random.
 
 ## 3. The two errors
 
@@ -60,7 +64,8 @@ to random.
 Under the working assumptions these differ by roughly a factor of ten, which is why the 0.5
 cutoff that `predict()` returns by default is the wrong place to stand.
 
-At the recommended 44.7% cutoff, applied to the test fold:
+At the proposed 44.7% cutoff, applied retrospectively to the
+test fold:
 
 | | |
 | --- | --- |
@@ -71,22 +76,20 @@ At the recommended 44.7% cutoff, applied to the test fold:
 | Good accounts turned away | 352 |
 | Precision / recall at the cutoff | 0.618 / 0.430 |
 
-This is a **retrospective evaluation on held-out data**. No live decisions were made, the
-declined accounts were in fact extended credit, and no claim is made that lending outcomes
-improved.
+No live decisions were made and every declined account was in fact given credit, so this
+shows what the rule would have done, not that lending improved.
 
-**Why not the cost-minimising cutoff?** Minimising modelled net cost implies a
-5.1% cutoff - declining most of the book
-(92%). That is an artefact of comparing a one-period loss against one
-period of margin: as the assumed margin rises from 6%
-to 60%, the implied cutoff moves from
-5% to 23% and the approval rate
-from 8% to 72%. The cutoff should
-therefore be set by risk appetite, with the cost calculation used as a sensitivity.
+A purely cost-minimising cutoff would sit at 5.1% and decline
+92% of the book. That comes from weighing one period of loss against one
+period of margin, and it swings from 5% to
+23% as the assumed margin changes. Risk appetite is the more
+stable anchor.
 
 ## 4. Expected credit loss
 
-`EL = PD x LGD x EAD`, on the test fold, baseline assumptions:
+`EL = PD x LGD x EAD`, on the test fold, baseline assumptions. **Horizon: one month.** Every
+PD is the chance of default in October 2005, so this is one month's expected loss, not a
+12-month or lifetime figure.
 
 | | |
 | --- | --- |
@@ -99,9 +102,11 @@ therefore be set by risk appetite, with the cost calculation used as a sensitivi
 
 **Partial back-test.** Holding LGD fixed, the loss implied by the accounts that actually
 defaulted is NT$67.5m against a modelled
-NT$65.7m, within
-2.7%. That checks PD and
-EAD against outcomes. It says nothing about the LGD assumption.
+NT$65.7m, 2.7%
+lower. The same EAD and LGD sit on both sides and cancel, so this checks only exposure-weighted
+PD calibration. The gap is real: low-risk accounts are slightly under-predicted and carry the
+largest balances, so the model is optimistic by exposure even though it is conservative by
+account count.
 
 ### Scenarios
 
@@ -120,31 +125,35 @@ The planning figure for the committee is the severe scenario, roughly
 `outputs/tables/sensitivity_grid.csv` shows that a substantial share of that movement comes from
 the LGD assumption rather than from the model.
 
-## 5. Key risks in using this model
+## 5. Risks and mitigants
 
-1. **LGD is assumed, not estimated.** Every currency figure scales with it. Sourcing recovery
-   data is the highest-value next step.
-2. **Single cohort.** One six-month window and one outcome month. No out-of-time validation is
-   possible, so the reported PSI of 0.0007 is a formality, not
-   evidence of through-time stability.
-3. **Regime.** Taiwan 2005 followed a domestic card-debt crisis; a 22%
-   default rate should not be read across to another portfolio.
-4. **Behavioural dependency.** The model degrades to roughly
-   0.63
-   ROC-AUC without repayment history. Any application-time use would be a misuse.
-5. **Protected characteristics.** Sex, education and marital status are present in the data and
-   are used here only for segment monitoring. They are prohibited or restricted inputs for credit
-   decisions in many jurisdictions and must be removed, with disparate-impact testing on what
-   remains, before deployment.
+1. **Risk:** default is defined only as "default payment next month", with no days-past-due
+   threshold, while LGD is a charge-off-scale 65%. If some defaults cure, loss
+   is overstated.
+   **Mitigant:** treat the figures as an upper bound; the PD-stress by LGD grid shows the range.
+2. **Risk:** LGD is assumed, not estimated, and every currency figure scales with it.
+   **Mitigant:** stated wherever it is used; recovery data is the first thing to source.
+3. **Risk:** calibration slope of 0.91; loss understated by about
+   2.7% by exposure.
+   **Mitigant:** all ten deciles pass the binomial backtest; monitor exposure-weighted
+   actual-to-expected quarterly.
+4. **Risk:** one more month of latest arrears moves mean PD +25%, so
+   errors in that field flow straight into loss.
+   **Mitigant:** lineage check traces it to source exactly; monitor its distribution monthly.
+5. **Risk:** sex, education and marital status are **model inputs**, restricted or prohibited for
+   credit decisions in many jurisdictions.
+   **Mitigant:** not approved for decisioning; removal and disparate-impact testing are conditions.
+6. **Risk:** one cohort, one outcome month, Taiwan 2005; PSI of
+   0.0007 reflects a random split, not stability over time.
+   Without repayment history the model falls to 0.63 ROC-AUC.
+   **Mitigant:** use restricted to this book and to existing accounts; out-of-time test required
+   before production.
 
-## 6. Monitoring, if deployed
+## 6. Monitoring
 
-- Monthly PSI on the score distribution; investigate above 0.10, escalate above 0.25.
-- Quarterly recalibration check: predicted versus observed default rate by decile.
-- Track the approved book's default rate against the 15% appetite
-  target and re-set the cutoff when it drifts.
-- Annual challenger comparison against the logistic scorecard; retire the champion if the gap
-  closes.
+Monitoring indicators, triggers and the revalidation cycle are in the
+[model risk appendix](model_risk_appendix.md). Full findings are in the
+[validation report](model_validation_report.md).
 
 ---
 

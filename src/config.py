@@ -86,8 +86,8 @@ SCENARIOS = {
         "lgd": LGD_BASELINE,
         "ccf": CCF_BASELINE,
         "narrative": (
-            "Current conditions persist. Unemployment and interest rates stay near "
-            "present levels; observed default behaviour continues into the next cycle."
+            "Hypothetical. Conditions in the observation window continue: the model's "
+            "PDs are used as estimated, with baseline LGD and credit conversion factor."
         ),
     },
     "Moderate deterioration": {
@@ -95,8 +95,9 @@ SCENARIOS = {
         "lgd": LGD_MODERATE,
         "ccf": CCF_MODERATE,
         "narrative": (
-            "A mild recession: unemployment rises by roughly 2 percentage points and "
-            "policy rates rise, raising default odds by 50% and reducing recoveries."
+            "Hypothetical mild downturn. Default odds rise 50%, recoveries fall and "
+            "borrowers draw more of their undrawn line. Severity is judgemental; no "
+            "macroeconomic variable is modelled."
         ),
     },
     "Severe deterioration": {
@@ -104,9 +105,9 @@ SCENARIOS = {
         "lgd": LGD_SEVERE,
         "ccf": CCF_SEVERE,
         "narrative": (
-            "A severe recession comparable to a supervisory stress scenario: default "
-            "odds more than double, recoveries fall sharply and borrowers draw more of "
-            "their undrawn credit lines before defaulting."
+            "Hypothetical severe downturn. Default odds rise 2.25x, recoveries fall "
+            "sharply and borrowers draw most of their undrawn line before defaulting. "
+            "Severity is judgemental and not calibrated to any supervisory scenario."
         ),
     },
 }

@@ -211,9 +211,9 @@ def build() -> str:
     tiles = [
         ("Exposure at default", _money(head["portfolio_ead"]),
          f"{head['test_accounts']:,} held-out accounts"),
-        ("Expected loss, baseline", _money(head["portfolio_el"]),
+        ("Expected loss, baseline (1 month)", _money(head["portfolio_el"]),
          f"{head['portfolio_el_rate']:.2%} of exposure"),
-        ("Expected loss, severe", _money(head["severe_el"]),
+        ("Expected loss, severe (1 month)", _money(head["severe_el"]),
          f"+{head['severe_el_uplift_pct']:.0%} versus baseline"),
         ("Model ROC-AUC", f"{head['champion_roc_auc']:.3f}",
          f"Gini {head['champion_gini']:.3f} · KS {head['champion_ks']:.3f}"),
@@ -373,10 +373,15 @@ crisis. A {head['test_default_rate']:.0%} default rate is not a through-the-cycl
 repayment history and cannot be used at origination.</li>
 <li><strong>No macroeconomic variables.</strong> Unemployment and interest rates enter only
 through the scenario multipliers, not as model inputs.</li>
-<li><strong>Demographic inputs.</strong> Sex, education and marital status appear in the dataset
-and are used here for segment monitoring. Several are prohibited or restricted inputs for credit
-decisions in many jurisdictions; a deployable model would exclude them and be tested for
-disparate impact.</li>
+<li><strong>Demographic inputs.</strong> Sex, education and marital status are inputs to the
+model, not only reporting segments. Several are prohibited or restricted for credit decisions in
+many jurisdictions; a deployable model would drop them and be tested for disparate impact.</li>
+<li><strong>One-month horizon.</strong> Every PD is the chance of default next month, so expected
+loss is a one-month figure, not a 12-month or lifetime one.</li>
+<li><strong>Default definition.</strong> The source gives no days-past-due threshold. If some
+defaults cure, the assumed LGD overstates loss.</li>
+<li><strong>Self-assessed.</strong> Reviewed against model-risk frameworks by the developer, not
+independently. Approved with conditions for reporting, not for credit decisions.</li>
 </ul>
 
 <footer>Built from the UCI Default of Credit Card Clients dataset. Portfolio project &mdash; not

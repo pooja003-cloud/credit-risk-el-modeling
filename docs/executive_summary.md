@@ -27,8 +27,9 @@ The probabilities are calibrated as well as ordered: expected calibration error
 0.0174, Brier score 0.1351. That is what makes them usable
 in a loss calculation at all.
 
-Baseline expected loss is **NT$65.7m** on NT$549.0m of
-exposure (11.96%). Under a severe scenario, where default odds more than
+Baseline expected loss over one month is **NT$65.7m** on
+NT$549.0m of exposure (11.96%). The model predicts default in
+the following month, so this is not a 12-month or lifetime figure. Under a severe scenario, where default odds more than
 double and recoveries fall, it reaches NT$168.9m
 (+157%).
 
@@ -69,6 +70,10 @@ decile alone accounts for
   card-debt crisis. A 22% default rate is not a through-the-cycle rate.
 - No live decisions were made and no lending outcome was improved. The cutoff analysis is a
   retrospective evaluation on held-out data.
+- Default is defined only as "default payment next month", with no days-past-due threshold. If
+  some of those accounts cure, the assumed LGD overstates loss.
+- The model's own developer ran the validation. It is approved with conditions for reporting,
+  not for credit decisions; see the [model risk appendix](model_risk_appendix.md).
 
 ## Recommended next steps
 

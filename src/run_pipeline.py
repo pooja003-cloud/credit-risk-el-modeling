@@ -271,6 +271,19 @@ def main(retrain: bool = True) -> dict:
         except Exception as exc:  # pragma: no cover
             print(f"      SHAP skipped: {exc}")
 
+    # ---------------------------------------------------------------- validation ------
+    print("[5b/8] Validation tests")
+    from .validation import run_all as run_validation
+
+    validation = run_validation(
+        load_model("behavioural", champion, calibrated=True),
+        load_model("behavioural", "Logistic regression", calibrated=True),
+        test, feats, el_base["ead"].to_numpy(),
+    )
+    for name, table in validation["tables"].items():
+        _save_table(table, name)
+    results["validation"] = validation["summary"]
+
     # ---------------------------------------------------------------- figures ---------
     print("[6/8] Figures")
     full = pd.concat([train, val, test], ignore_index=True)
